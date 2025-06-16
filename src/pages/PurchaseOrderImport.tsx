@@ -14,9 +14,12 @@ import {
   Square,
   AlertCircle,
   Calendar,
-  DollarSign
+  DollarSign,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { io, Socket } from 'socket.io-client';
 
 interface Product {
   id: string;
@@ -68,6 +71,9 @@ export default function PurchaseOrderImport() {
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectAll, setSelectAll] = useState(false);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [socketConnected, setSocketConnected] = useState(false);
+  const [serverMessages, setServerMessages] = useState<Array<{message: string, isError: boolean}>>([]);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -108,6 +114,55 @@ export default function PurchaseOrderImport() {
     }
   }, []);
 
+  // Socket.IO setup
+  useEffect(() => {
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
+    const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
+    
+    // Initialize Socket.IO connection
+    const socketInstance = io(apiBaseUrl, {
+      path: `${basePath}/socket.io/`,
+      transports: ['websocket', 'polling'],
+      autoConnect: true,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      timeout: 20000,
+    });
+
+    // Connection event handlers
+    socketInstance.on('connect', () => {
+      console.log('Socket.IO connected');
+      setSocketConnected(true);
+      setServerMessages(prev => [...prev, { message: 'Server connected - You are Good to go', isError: false }]);
+    });
+
+    socketInstance.on('disconnect', () => {
+      console.log('Socket.IO disconnected');
+      setSocketConnected(false);
+      setServerMessages(prev => [...prev, { message: 'Server disconnected', isError: true }]);
+    });
+
+    socketInstance.on('connect_error', (error) => {
+      console.error('Socket.IO connection error:', error);
+      setSocketConnected(false);
+      setServerMessages(prev => [...prev, { message: `Connection error: ${error.message}`, isError: true }]);
+    });
+
+    // Message event handler
+    socketInstance.on('message', (messageContent: string, contentError?: string) => {
+      const isError = contentError === 'error';
+      setServerMessages(prev => [...prev, { message: messageContent, isError }]);
+    });
+
+    setSocket(socketInstance);
+
+    // Cleanup on unmount
+    return () => {
+      socketInstance.disconnect();
+    };
+  }, []);
+
   // Load vendors and categories
   useEffect(() => {
     loadVendors();
@@ -122,7 +177,10 @@ export default function PurchaseOrderImport() {
   const loadVendors = async () => {
     try {
       const token = localStorage.getItem('bridesbyldToken');
-      const response = await fetch('/shopify/vendors', {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
+      
+      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/vendors`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -138,7 +196,10 @@ export default function PurchaseOrderImport() {
   const loadCategories = async () => {
     try {
       const token = localStorage.getItem('bridesbyldToken');
-      const response = await fetch('/shopify/productTypes', {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
+      
+      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/productTypes`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -223,11 +284,14 @@ export default function PurchaseOrderImport() {
 
     // Get SKUs and barcodes
     const token = localStorage.getItem('bridesbyldToken');
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
+    const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
+    
     const [skusResponse, barcodesResponse] = await Promise.all([
-      fetch(`/shopify/getsku/${productCount}`, {
+      fetch(`${apiBaseUrl}${basePath}/shopify/getsku/${productCount}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       }),
-      fetch(`/shopify/barcode/${productCount}`, {
+      fetch(`${apiBaseUrl}${basePath}/shopify/barcode/${productCount}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
     ]);
@@ -416,6 +480,21 @@ export default function PurchaseOrderImport() {
                 </span>
               </h1>
               <p className="text-slate-600 mt-1">Import purchase order from Excel file</p>
+              
+              {/* Socket Connection Status */}
+              <div className="flex items-center gap-2 mt-2">
+                {socketConnected ? (
+                  <div className="flex items-center gap-1 text-green-600">
+                    <Wifi className="w-4 h-4" />
+                    <span className="text-sm">Connected</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 text-red-600">
+                    <WifiOff className="w-4 h-4" />
+                    <span className="text-sm">Disconnected</span>
+                  </div>
+                )}
+              </div>
             </div>
             
             <div className="flex flex-col sm:flex-row gap-3">
@@ -450,6 +529,23 @@ export default function PurchaseOrderImport() {
             </div>
           </div>
         </Card>
+
+        {/* Server Messages */}
+        {serverMessages.length > 0 && (
+          <Card className="max-h-32 overflow-y-auto">
+            <h3 className="text-sm font-semibold text-slate-900 mb-2">Server Messages</h3>
+            <div className="space-y-1">
+              {serverMessages.slice(-5).map((msg, index) => (
+                <p 
+                  key={index} 
+                  className={`text-xs ${msg.isError ? 'text-red-600' : 'text-green-600'}`}
+                >
+                  {msg.message}
+                </p>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {/* Error Display */}
         {error && (
