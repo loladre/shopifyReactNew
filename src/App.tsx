@@ -1,7 +1,28 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Loader2, ShoppingBag } from 'lucide-react';
+
+// Import all pages
 import PurchaseOrderImport from './pages/PurchaseOrderImport';
+import Dashboard from './pages/Dashboard';
+import DraftOrders from './pages/DraftOrders';
+import PublishedOrders from './pages/PublishedOrders';
+import Reorder from './pages/Reorder';
+import LateOrders from './pages/LateOrders';
+import Vendors from './pages/Vendors';
+import Reminders from './pages/Reminders';
+import Seasons from './pages/Seasons';
+import Counts from './pages/Counts';
+import NewArrivals from './pages/NewArrivals';
+import NewReturn from './pages/NewReturn';
+import ReturnList from './pages/ReturnList';
+import ExcelImport from './pages/ExcelImport';
+import SingleItem from './pages/SingleItem';
+import BulkDiscount from './pages/BulkDiscount';
+import BulkDiscountReverse from './pages/BulkDiscountReverse';
+import SellThroughImport from './pages/SellThroughImport';
+import SellThroughData from './pages/SellThroughData';
+import Pictures from './pages/Pictures';
 
 interface LoginResponse {
   registered: boolean;
@@ -86,8 +107,8 @@ function LoginPage() {
         if (data.token) {
           localStorage.setItem('bridesbyldToken', data.token);
         }
-        // Navigate to purchase order page using React Router
-        window.location.href = `${basePath}/shopifyreact/purchase-order`;
+        // Navigate to dashboard instead of purchase order page
+        window.location.href = `${basePath}/shopifyreact/dashboard`;
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred during login');
@@ -242,8 +263,26 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<LoginPage />} />
-        <Route path="/shopifyreact" element={<Navigate to="/" replace />} />
-        <Route path="/shopifyreact/" element={<Navigate to="/" replace />} />
+        <Route path="/shopifyreact" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/shopifyreact/" element={<Navigate to="/dashboard" replace />} />
+        
+        {/* Protected Routes */}
+        <Route 
+          path="/dashboard" 
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/shopifyreact/dashboard" 
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
         <Route 
           path="/purchase-order" 
           element={
@@ -257,6 +296,164 @@ function App() {
           element={
             <ProtectedRoute>
               <PurchaseOrderImport />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Orders Routes */}
+        <Route 
+          path="/draft-orders" 
+          element={
+            <ProtectedRoute>
+              <DraftOrders />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/published-orders" 
+          element={
+            <ProtectedRoute>
+              <PublishedOrders />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/reorder" 
+          element={
+            <ProtectedRoute>
+              <Reorder />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/late-orders" 
+          element={
+            <ProtectedRoute>
+              <LateOrders />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Accounting Routes */}
+        <Route 
+          path="/vendors" 
+          element={
+            <ProtectedRoute>
+              <Vendors />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/reminders" 
+          element={
+            <ProtectedRoute>
+              <Reminders />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Products Routes */}
+        <Route 
+          path="/seasons" 
+          element={
+            <ProtectedRoute>
+              <Seasons />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/counts" 
+          element={
+            <ProtectedRoute>
+              <Counts />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/new-arrivals" 
+          element={
+            <ProtectedRoute>
+              <NewArrivals />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Returns Routes */}
+        <Route 
+          path="/new-return" 
+          element={
+            <ProtectedRoute>
+              <NewReturn />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/return-list" 
+          element={
+            <ProtectedRoute>
+              <ReturnList />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Price2Spy Routes */}
+        <Route 
+          path="/excel-import" 
+          element={
+            <ProtectedRoute>
+              <ExcelImport />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/single-item" 
+          element={
+            <ProtectedRoute>
+              <SingleItem />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/bulk-discount" 
+          element={
+            <ProtectedRoute>
+              <BulkDiscount />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/bulk-discount-reverse" 
+          element={
+            <ProtectedRoute>
+              <BulkDiscountReverse />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Sell Through Routes */}
+        <Route 
+          path="/sell-through-import" 
+          element={
+            <ProtectedRoute>
+              <SellThroughImport />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/sell-through-data" 
+          element={
+            <ProtectedRoute>
+              <SellThroughData />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Pictures Route */}
+        <Route 
+          path="/pictures" 
+          element={
+            <ProtectedRoute>
+              <Pictures />
             </ProtectedRoute>
           } 
         />
