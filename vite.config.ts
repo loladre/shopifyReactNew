@@ -12,6 +12,9 @@ export default defineConfig(({ mode }) => {
   // Base configuration for Bolt environment
   const boltConfig = {
     plugins: [react()],
+    server: {
+      allowedHosts: ['hushloladre.com'],
+    },
     optimizeDeps: {
       exclude: ["lucide-react"],
     },
@@ -30,6 +33,7 @@ export default defineConfig(({ mode }) => {
         protocol: "ws",
         host: "hushloladre.com",
       },
+      allowedHosts: ['hushloladre.com'],
     },
     optimizeDeps: {
       exclude: ["lucide-react"],
