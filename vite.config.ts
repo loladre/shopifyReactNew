@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
 
   // Determine if we're in Bolt environment or development
-  const isBolt = mode === "development" && !env.VITE_ENVIRONMENT;
+  const isBolt = mode === "bolt" || (mode === "development" && !env.VITE_ENVIRONMENT);
   const isDev = env.VITE_ENVIRONMENT === "development";
 
   // Base configuration for Bolt environment
@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       allowedHosts: ['hushloladre.com'],
+      strictPort: true,
       hmr: {
         port: 5173,
       },
