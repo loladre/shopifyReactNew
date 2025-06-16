@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       host: '0.0.0.0',
       strictPort: false,
+      allowedHosts: ['hushloladre.com', 'localhost', '127.0.0.1', '.hushloladre.com'],
     },
     optimizeDeps: {
       exclude: ["lucide-react"],
@@ -30,7 +31,7 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       strictPort: false,
       host: '0.0.0.0',
-      allowedHosts: ['hushloladre.com', 'localhost', '127.0.0.1'],
+      allowedHosts: ['hushloladre.com', 'localhost', '127.0.0.1', '.hushloladre.com'],
     },
     optimizeDeps: {
       exclude: ["lucide-react"],
