@@ -1,22 +1,22 @@
-import { defineConfig, loadEnv } from 'vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig, loadEnv } from "vite";
+import react from "@vitejs/plugin-react";
 
 export default defineConfig(({ mode }) => {
   // Load environment variables based on mode
-  const env = loadEnv(mode, process.cwd(), '');
-  
+  const env = loadEnv(mode, process.cwd(), "");
+
   // Determine if we're in Bolt environment or development
-  const isBolt = mode === 'development' && !env.VITE_ENVIRONMENT;
-  const isDev = env.VITE_ENVIRONMENT === 'development';
-  
+  const isBolt = mode === "development" && !env.VITE_ENVIRONMENT;
+  const isDev = env.VITE_ENVIRONMENT === "development";
+
   // Base configuration for Bolt environment
   const boltConfig = {
     plugins: [react()],
     optimizeDeps: {
-      exclude: ['lucide-react'],
+      exclude: ["lucide-react"],
     },
   };
-  
+
   // Configuration for your development environment
   const devConfig = {
     plugins: [react()],
@@ -27,19 +27,19 @@ export default defineConfig(({ mode }) => {
       origin: "https://hushloladre.com",
       hmr: {
         clientPort: 443,
-        protocol: "wss",
+        protocol: "ws",
         host: "hushloladre.com",
       },
     },
     optimizeDeps: {
-      exclude: ['lucide-react'],
+      exclude: ["lucide-react"],
     },
   };
-  
+
   // Return appropriate configuration based on environment
   if (isDev) {
     return devConfig;
   }
-  
+
   return boltConfig;
 });
