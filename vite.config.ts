@@ -64,5 +64,4 @@ export default defineConfig(({ mode }) => {
   }
 
   return boltConfig;
-};
-)
+});
