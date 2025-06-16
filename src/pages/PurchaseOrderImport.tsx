@@ -532,10 +532,86 @@ export default function PurchaseOrderImport() {
     );
   };
 
+  // Updated function to apply changes to all products with the same style/name
   const applyToSelected = (field: string, value: any) => {
-    setProducts(
-      products.map((product) => (product.selected ? { ...product, [field]: value } : product))
+    // Get the styles/names of all selected products
+    const selectedProductStyles = new Set(
+      products
+        .filter(product => product.selected)
+        .map(product => `${product.style}-${product.color}`) // Use style + color as unique identifier
     );
+
+    if (selectedProductStyles.size === 0) {
+      setError("Please select at least one product first");
+      return;
+    }
+
+    // Apply the change to all products that match any of the selected styles
+    setProducts(products.map(product => {
+      const productStyleKey = `${product.style}-${product.color}`;
+      if (selectedProductStyles.has(productStyleKey)) {
+        return { ...product, [field]: value };
+      }
+      return product;
+    }));
+
+    // Clear error if it was set
+    setError("");
+    
+    // Show success message
+    const affectedCount = products.filter(product => {
+      const productStyleKey = `${product.style}-${product.color}`;
+      return selectedProductStyles.has(productStyleKey);
+    }).length;
+    
+    setServerMessages(prev => [
+      ...prev,
+      { 
+        message: `Applied ${field} to ${affectedCount} products across ${selectedProductStyles.size} style(s)`, 
+        isError: false 
+      }
+    ]);
+  };
+
+  // Updated function to clear field for selected product styles
+  const clearFromSelected = (field: string) => {
+    // Get the styles/names of all selected products
+    const selectedProductStyles = new Set(
+      products
+        .filter(product => product.selected)
+        .map(product => `${product.style}-${product.color}`) // Use style + color as unique identifier
+    );
+
+    if (selectedProductStyles.size === 0) {
+      setError("Please select at least one product first");
+      return;
+    }
+
+    // Clear the field for all products that match any of the selected styles
+    setProducts(products.map(product => {
+      const productStyleKey = `${product.style}-${product.color}`;
+      if (selectedProductStyles.has(productStyleKey)) {
+        return { ...product, [field]: field === 'preorder' ? false : '' };
+      }
+      return product;
+    }));
+
+    // Clear error if it was set
+    setError("");
+    
+    // Show success message
+    const affectedCount = products.filter(product => {
+      const productStyleKey = `${product.style}-${product.color}`;
+      return selectedProductStyles.has(productStyleKey);
+    }).length;
+    
+    setServerMessages(prev => [
+      ...prev,
+      { 
+        message: `Cleared ${field} from ${affectedCount} products across ${selectedProductStyles.size} style(s)`, 
+        isError: false 
+      }
+    ]);
   };
 
   const addPayment = () => {
@@ -740,6 +816,9 @@ export default function PurchaseOrderImport() {
         {/* Control Panel */}
         <Card>
           <h3 className="text-lg font-semibold text-slate-900 mb-4">Product Controls</h3>
+          <p className="text-sm text-slate-600 mb-4">
+            Select products by checking the boxes, then apply changes to all sizes of the same style.
+          </p>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <FormField label="Category">
               <div className="flex gap-2">
@@ -762,7 +841,7 @@ export default function PurchaseOrderImport() {
                 >
                   Apply
                 </Button>
-                <Button size="sm" variant="danger" onClick={() => applyToSelected("category", "")}>
+                <Button size="sm" variant="danger" onClick={() => clearFromSelected("category")}>
                   Clear
                 </Button>
               </div>
@@ -784,6 +863,9 @@ export default function PurchaseOrderImport() {
                 >
                   Apply
                 </Button>
+                <Button size="sm" variant="danger" onClick={() => clearFromSelected("preorder")}>
+                  Clear
+                </Button>
               </div>
             </FormField>
 
@@ -803,7 +885,15 @@ export default function PurchaseOrderImport() {
                   <option value="jd">Juliet Dunn</option>
                   <option value="lmf">Lisa Marie Fernandez</option>
                 </select>
-                <Button size="sm">Apply</Button>
+                <Button 
+                  size="sm" 
+                  onClick={() => applyToSelected("sizing", formData.sizing)}
+                >
+                  Apply
+                </Button>
+                <Button size="sm" variant="danger" onClick={() => clearFromSelected("sizing")}>
+                  Clear
+                </Button>
               </div>
             </FormField>
           </div>
@@ -855,6 +945,9 @@ export default function PurchaseOrderImport() {
           <Card padding="none">
             <div className="p-6 border-b border-slate-200">
               <h3 className="text-lg font-semibold text-slate-900">Products ({products.length})</h3>
+              <p className="text-sm text-slate-600 mt-1">
+                Select products to apply bulk changes to all sizes of the same style
+              </p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
