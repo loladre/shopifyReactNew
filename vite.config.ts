@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
       allowedHosts: ['hushloladre.com', 'localhost', '127.0.0.1', '.hushloladre.com'],
     },
     optimizeDeps: {
-      exclude: ["lucide-react"],
+      // Removed lucide-react from exclude to allow pre-bundling
     },
   };
 
@@ -36,7 +36,7 @@ export default defineConfig(({ mode }) => {
       allowedHosts: ['hushloladre.com', 'localhost', '127.0.0.1', '.hushloladre.com'],
     },
     optimizeDeps: {
-      exclude: ["lucide-react"],
+      // Removed lucide-react from exclude to allow pre-bundling
     },
   };
 
