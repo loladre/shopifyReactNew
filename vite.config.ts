@@ -34,8 +34,13 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       strictPort: true,
-      host: true, // Allow external connections
-      allowedHosts: "all", // Allow all hosts - this should fix the blocking issue
+      host: '0.0.0.0',
+      allowedHosts: [
+        'hushloladre.com',
+        'www.hushloladre.com',
+        'localhost',
+        '127.0.0.1'
+      ],
       hmr: {
         clientPort: 443,
         protocol: "wss",
