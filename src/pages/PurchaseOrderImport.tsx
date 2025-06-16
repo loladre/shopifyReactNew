@@ -333,30 +333,31 @@ export default function PurchaseOrderImport() {
     // Extract form data from Excel
     updateFormFromExcel(data);
 
-    // Count products for SKU/barcode generation
-    let productCount = 0;
+    // Count products for SKU/barcode generation - count total quantity across all sizes
+    let totalQuantity = 0;
     for (let i = headersPosition + 1; i < data.length; i++) {
       if (!data[i] || !data[i][styleNamePos]) break;
       for (let j = firstSizePos; j <= lastSizePos; j++) {
         const quantity = data[i][j];
         if (quantity && quantity !== "0" && quantity !== 0) {
-          productCount++;
+          const quantityNum = parseInt(quantity.toString()) || 0;
+          totalQuantity += quantityNum;
         }
       }
     }
 
-    console.log(`Found ${productCount} products to process`);
+    console.log(`Total quantity across all products: ${totalQuantity}`);
 
-    // Get SKUs and barcodes
+    // Get SKUs and barcodes based on total quantity
     const token = localStorage.getItem("bridesbyldToken");
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
     const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
 
     const [skusResponse, barcodesResponse] = await Promise.all([
-      fetch(`${apiBaseUrl}${basePath}/shopify/getsku/${productCount}`, {
+      fetch(`${apiBaseUrl}${basePath}/shopify/getsku/${totalQuantity}`, {
         headers: { Authorization: `Bearer ${token}` },
       }),
-      fetch(`${apiBaseUrl}${basePath}/shopify/barcode/${productCount}`, {
+      fetch(`${apiBaseUrl}${basePath}/shopify/barcode/${totalQuantity}`, {
         headers: { Authorization: `Bearer ${token}` },
       }),
     ]);
@@ -380,34 +381,37 @@ export default function PurchaseOrderImport() {
           const margin = retail > 0 ? ((retail - cost) / retail) * 100 : 0;
           const quantityNum = parseInt(quantity.toString()) || 0;
 
-          newProducts.push({
-            id: `${i}-${j}`,
-            selected: false,
-            name: `${data[i][styleNamePos]} ${data[i][styleNumberPos]} ${data[i][colorPos]}`,
-            style: data[i][styleNumberPos]?.toString() || "",
-            color: data[i][colorPos]?.toString() || "",
-            size: headers[j]?.toString() || "",
-            quantity: quantityNum,
-            cost,
-            retail,
-            sku: skus[skuIndex++] || "",
-            barcode: barcodes[barcodeIndex++] || "",
-            season: "",
-            category: "",
-            tags: "",
-            preorder: false,
-            margin,
-            total: cost * quantityNum,
-            shoeSize: "",
-            clothingSize: "",
-            jeansSize: "",
-            metaCategory: "",
-          });
+          // Create individual products for each unit in the quantity
+          for (let k = 0; k < quantityNum; k++) {
+            newProducts.push({
+              id: `${i}-${j}-${k}`,
+              selected: false,
+              name: `${data[i][styleNamePos]} ${data[i][styleNumberPos]} ${data[i][colorPos]}`,
+              style: data[i][styleNumberPos]?.toString() || "",
+              color: data[i][colorPos]?.toString() || "",
+              size: headers[j]?.toString() || "",
+              quantity: 1, // Each product represents 1 unit
+              cost,
+              retail,
+              sku: skus[skuIndex++] || "",
+              barcode: barcodes[barcodeIndex++] || "",
+              season: "",
+              category: "",
+              tags: "",
+              preorder: false,
+              margin,
+              total: cost, // Cost for 1 unit
+              shoeSize: "",
+              clothingSize: "",
+              jeansSize: "",
+              metaCategory: "",
+            });
+          }
         }
       }
     }
 
-    console.log(`Processed ${newProducts.length} products`);
+    console.log(`Processed ${newProducts.length} individual products`);
     setProducts(newProducts);
   };
 
