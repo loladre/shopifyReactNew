@@ -76,6 +76,37 @@ interface Credit {
   amount: number;
 }
 
+interface PurchaseOrderSchema {
+  purchaseOrderID: number;
+  purchaseOrderNumber: string;
+  brand: string;
+  draftOrder: boolean;
+  publishedOrder: boolean;
+  createdDate: string;
+  startShipDate: string;
+  completedDate: string;
+  brandPoNumber: string;
+  purchaseOrderSeason: string;
+  terms: string;
+  depositPercent: string;
+  onDeliverPercent: string;
+  net30Percent: string;
+  purchaseOrderTotalPayments: string;
+  purchaseOrderTotalCredits: string;
+  purchaseOrderTotalItemsCost: string;
+  purchaseOrderBalanceDue: string;
+  purchaseOrderNotes: string;
+  purchaseOrderCompleteReceive: boolean;
+  totalVariantReceivedQuantity: number;
+  purchaseOrdertotalReceivedValue: number;
+  purchaseOrderFiles: any[];
+  totalProductQuantity: number;
+  totalVariantQuantity: number;
+  products: any[];
+  purchaseOrderCredits: any[];
+  purchaseOrderPayments: any[];
+}
+
 export default function PurchaseOrderImport() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -91,6 +122,8 @@ export default function PurchaseOrderImport() {
   const [serverMessages, setServerMessages] = useState<
     Array<{ message: string; isError: boolean }>
   >([]);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState("");
 
   // Form state
   const [formData, setFormData] = useState({
@@ -709,19 +742,6 @@ export default function PurchaseOrderImport() {
     );
   };
 
-  const handleSave = async () => {
-    setIsLoading(true);
-    try {
-      // Validation and save logic here
-      console.log("Saving purchase order...", { formData, products, payments, credits, totals });
-      // Add actual save implementation
-    } catch (error) {
-      setError("Failed to save purchase order");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // Group products by style for alternating row colors
   const getRowClassName = (product: Product, index: number) => {
     const styleGroups: { [key: string]: number } = {};
@@ -737,6 +757,354 @@ export default function PurchaseOrderImport() {
     
     const currentGroupIndex = styleGroups[product.style];
     return currentGroupIndex % 2 === 0 ? "bg-white" : "bg-slate-50";
+  };
+
+  // Schema building functions
+  const fillBasicDetails = (schema: PurchaseOrderSchema) => {
+    // purchaseOrderID - use current epoch timestamp
+    schema.purchaseOrderID = new Date().getTime();
+
+    // purchaseOrderNumber
+    schema.purchaseOrderNumber = formData.brandPO;
+
+    // brand - check which radio button is selected
+    if (formData.vendorType === "existing") {
+      schema.brand = formData.selectedVendor;
+    } else {
+      schema.brand = formData.newVendor;
+    }
+
+    // draftOrder and publishedOrder
+    schema.draftOrder = true;
+    schema.publishedOrder = false;
+
+    // dates
+    schema.createdDate = formData.createdDate;
+    schema.startShipDate = formData.startShipDate;
+    schema.completedDate = formData.completeDate;
+
+    // brandPoNumber
+    schema.brandPoNumber = formData.brandPO;
+
+    // season
+    schema.purchaseOrderSeason = constructSeason();
+
+    // terms
+    schema.terms = formData.terms;
+    schema.depositPercent = formData.deposit;
+    schema.onDeliverPercent = formData.delivery;
+    schema.net30Percent = formData.net30;
+
+    // totals
+    schema.purchaseOrderTotalPayments = totals.paymentTotal.toFixed(2);
+    schema.purchaseOrderTotalCredits = totals.creditTotal.toFixed(2);
+    schema.purchaseOrderTotalItemsCost = totals.subTotal.toFixed(2);
+    schema.purchaseOrderBalanceDue = totals.grandTotal.toFixed(2);
+
+    // notes
+    schema.purchaseOrderNotes = formData.notes;
+
+    // defaults
+    schema.purchaseOrderCompleteReceive = false;
+    schema.totalVariantReceivedQuantity = 0;
+    schema.purchaseOrdertotalReceivedValue = 0;
+    schema.purchaseOrderFiles = [];
+  };
+
+  const fillProducts = (schema: PurchaseOrderSchema) => {
+    schema.products = [];
+    let totalProductQuantity = 0;
+    let totalVariantQuantity = 0;
+    const productDict: { [key: string]: any } = {};
+
+    products.forEach((product) => {
+      const productName = product.name;
+      const variant = {
+        variantColor: product.color,
+        variantSize: product.size,
+        variantQuantity: product.quantity,
+        variantCost: product.cost.toFixed(2),
+        variantRetail: product.retail.toFixed(2),
+        variantSku: product.sku,
+        variantBarcode: product.barcode,
+        variantPreOrder: product.preorder,
+        variantMetafieldShoeSize: product.shoeSize,
+        variantMetafieldClothingSize: product.clothingSize,
+        variantMetafieldJeansSize: product.jeansSize,
+        variantMetafieldCategory: product.metaCategory,
+        variantQuantityReceived: 0,
+        variantQuantityRejected: 0,
+        variantCanceled: false,
+        variantReceivedComplete: false,
+        variantQuantityReceivedDate: null,
+        shopifyPreOrderSold: 0,
+      };
+
+      totalVariantQuantity += variant.variantQuantity;
+
+      const existingProduct = productDict[productName];
+      if (existingProduct) {
+        existingProduct.productVariants.push(variant);
+        if (product.tags.includes("preorder")) {
+          existingProduct.productTags = product.tags;
+        }
+      } else {
+        const newProduct = {
+          productName: productName,
+          productStyleNumber: product.style,
+          productSeasonMetafield: product.season,
+          productType: product.category,
+          productTags: product.tags,
+          productCanceled: false,
+          productReceivedDate: null,
+          productVariants: [variant],
+        };
+        productDict[productName] = newProduct;
+        totalProductQuantity++;
+      }
+    });
+
+    schema.totalProductQuantity = totalProductQuantity;
+    schema.totalVariantQuantity = totalVariantQuantity;
+    schema.products = Object.values(productDict);
+  };
+
+  const fillPurchaseOrderCredits = (schema: PurchaseOrderSchema) => {
+    schema.purchaseOrderCredits = credits.map((credit) => ({
+      creditDate: credit.date,
+      creditDescription: credit.description,
+      creditMethod: credit.method,
+      creditAmount: credit.amount,
+    }));
+  };
+
+  const fillPurchaseOrderPayments = (schema: PurchaseOrderSchema) => {
+    schema.purchaseOrderPayments = payments.map((payment) => ({
+      paymentDate: payment.date,
+      paymentDescription: payment.description,
+      paymentMethod: payment.method,
+      paymentAmount: payment.amount,
+    }));
+  };
+
+  const validateSchema = async (schema: PurchaseOrderSchema): Promise<boolean> => {
+    try {
+      const token = localStorage.getItem("bridesbyldToken");
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
+      // Check for duplicate orders
+      const response = await fetch(
+        `${apiBaseUrl}${basePath}/shopify/checkDuplicateOrder?brand=${encodeURIComponent(schema.brand)}&brandPoNumber=${encodeURIComponent(schema.brandPoNumber)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.duplicate) {
+        setError("Combination of brand and PO number already exists");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error checking for duplicate orders:", error);
+      setError("There was an error checking for duplicate orders. Please try again later.");
+      return false;
+    }
+
+    // Basic validation
+    if (!schema.brand || schema.brand === "undefined") {
+      setError("Brand is empty or null");
+      return false;
+    }
+
+    if (!schema.purchaseOrderID) {
+      setError("Purchase Order ID is empty or null");
+      return false;
+    }
+
+    if (!schema.purchaseOrderTotalItemsCost) {
+      setError("Purchase Order Total Items Cost is empty or null");
+      return false;
+    }
+
+    if (!schema.purchaseOrderBalanceDue) {
+      setError("Purchase Order Balance Due is empty or null");
+      return false;
+    }
+
+    // Validate products
+    for (const product of schema.products) {
+      if (!product.productName) {
+        setError("Product name is empty or null for a product");
+        return false;
+      }
+
+      if (!product.productSeasonMetafield) {
+        setError("Product season metafield is empty or null for a product");
+        return false;
+      }
+
+      if (!product.productType) {
+        setError("Product type is empty or null for a product");
+        return false;
+      }
+
+      if (!product.productTags) {
+        setError("Product tags is empty or null for a product");
+        return false;
+      }
+
+      // Validate variants
+      for (const variant of product.productVariants) {
+        if (!variant.variantColor) {
+          setError("Variant color is empty or null for a product variant");
+          return false;
+        }
+
+        if (!variant.variantSize) {
+          setError("Variant size is empty or null for a product variant");
+          return false;
+        }
+
+        if (!variant.variantQuantity) {
+          setError("Variant quantity is empty or null for a product variant");
+          return false;
+        }
+
+        if (!variant.variantCost || variant.variantCost === "0") {
+          setError("Variant cost is empty or null for a product variant");
+          return false;
+        }
+
+        if (!variant.variantRetail || variant.variantRetail === "0") {
+          setError("Variant retail is empty or null for a product variant");
+          return false;
+        }
+
+        if (!variant.variantSku) {
+          setError("Variant SKU is empty or null for a product variant");
+          return false;
+        }
+
+        if (!variant.variantBarcode) {
+          setError("Variant barcode is empty or null for a product variant");
+          return false;
+        }
+
+        if (variant.variantPreOrder === undefined) {
+          setError("Variant pre order is undefined for a product variant");
+          return false;
+        }
+      }
+    }
+
+    return true;
+  };
+
+  const sendPurchaseOrder = async (schema: PurchaseOrderSchema) => {
+    const token = localStorage.getItem("bridesbyldToken");
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+    const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
+    try {
+      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/saveDraftPurchaseorder`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(schema),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error sending purchase order:", error);
+      throw error;
+    }
+  };
+
+  const createPurchaseOrder = async () => {
+    setIsLoading(true);
+    setError("");
+    setSubmitSuccess(false);
+
+    try {
+      const schema: PurchaseOrderSchema = {
+        purchaseOrderID: 0,
+        purchaseOrderNumber: "",
+        brand: "",
+        draftOrder: true,
+        publishedOrder: false,
+        createdDate: "",
+        startShipDate: "",
+        completedDate: "",
+        brandPoNumber: "",
+        purchaseOrderSeason: "",
+        terms: "",
+        depositPercent: "",
+        onDeliverPercent: "",
+        net30Percent: "",
+        purchaseOrderTotalPayments: "",
+        purchaseOrderTotalCredits: "",
+        purchaseOrderTotalItemsCost: "",
+        purchaseOrderBalanceDue: "",
+        purchaseOrderNotes: "",
+        purchaseOrderCompleteReceive: false,
+        totalVariantReceivedQuantity: 0,
+        purchaseOrdertotalReceivedValue: 0,
+        purchaseOrderFiles: [],
+        totalProductQuantity: 0,
+        totalVariantQuantity: 0,
+        products: [],
+        purchaseOrderCredits: [],
+        purchaseOrderPayments: [],
+      };
+
+      fillBasicDetails(schema);
+      fillProducts(schema);
+      fillPurchaseOrderCredits(schema);
+      fillPurchaseOrderPayments(schema);
+
+      // Debug: Log the schema to console
+      console.log("Purchase Order Schema:", JSON.stringify(schema, null, 2));
+
+      // Validate schema
+      if (!(await validateSchema(schema))) {
+        return;
+      }
+
+      // Send to server
+      const result = await sendPurchaseOrder(schema);
+      
+      setSubmitSuccess(true);
+      setSubmitMessage("Draft Purchase order submitted successfully");
+      
+      // Disable further submissions
+      setIsLoading(false);
+      
+    } catch (error) {
+      console.error("Error creating purchase order:", error);
+      setError("OOPS, we ran into a snag, this purchase order was not submitted successfully");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    await createPurchaseOrder();
   };
 
   return (
@@ -816,6 +1184,16 @@ export default function PurchaseOrderImport() {
                   {msg.message}
                 </p>
               ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Success Message */}
+        {submitSuccess && (
+          <Card className="border-green-200 bg-green-50">
+            <div className="flex items-center gap-2 text-green-700">
+              <CheckSquare className="w-5 h-5" />
+              <span>{submitMessage}</span>
             </div>
           </Card>
         )}
@@ -1310,10 +1688,11 @@ export default function PurchaseOrderImport() {
             size="lg"
             onClick={handleSave}
             isLoading={isLoading}
+            disabled={submitSuccess}
             className="flex items-center gap-2 mx-auto"
           >
             <Save className="w-5 h-5" />
-            Save Draft Order
+            {submitSuccess ? "Order Submitted Successfully" : "Save Draft Order"}
           </Button>
         </Card>
       </div>
