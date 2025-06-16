@@ -18,8 +18,18 @@ export default defineConfig(({ mode }) => {
       hmr: false, // Disable HMR to prevent WebSocket conflicts
     },
     optimizeDeps: {
-      exclude: ["lucide-react"],
+      include: ["lucide-react"], // Include lucide-react for proper bundling
+      force: true, // Force re-optimization
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'lucide': ['lucide-react']
+          }
+        }
+      }
+    }
   };
 
   // Configuration for your development environment
@@ -34,8 +44,18 @@ export default defineConfig(({ mode }) => {
       hmr: false, // Disable HMR to prevent conflicts with Socket.IO
     },
     optimizeDeps: {
-      exclude: ["lucide-react"],
+      include: ["lucide-react"], // Include lucide-react for proper bundling
+      force: true, // Force re-optimization
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'lucide': ['lucide-react']
+          }
+        }
+      }
+    }
   };
 
   // Return appropriate configuration based on environment
