@@ -26,8 +26,8 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-white/90 backdrop-blur-lg border-b border-slate-200/50 sticky top-0 z-50 shadow-sm w-full">
-      <div className="w-full px-4 sm:px-6 lg:px-8">
+    <header className="bg-white/90 backdrop-blur-lg border-b border-slate-200/50 sticky top-0 z-50 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo and Brand */}
           <Link to="/" className="flex items-center space-x-3">
