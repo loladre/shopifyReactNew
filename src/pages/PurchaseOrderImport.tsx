@@ -106,20 +106,30 @@ export default function PurchaseOrderImport() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Authentication check
+  // Authentication check and WebSocket initialization
   useEffect(() => {
     const token = localStorage.getItem('bridesbyldToken');
     if (!token) {
       window.location.href = '/';
+      return;
     }
+
+    // Initialize WebSocket connection only after confirming authentication
+    initializeWebSocket(token);
+
+    return () => {
+      // Cleanup WebSocket on unmount
+      if (socket) {
+        socket.disconnect();
+      }
+    };
   }, []);
 
-  // Socket.IO setup
-  useEffect(() => {
+  const initializeWebSocket = (token: string) => {
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
     const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
     
-    // Initialize Socket.IO connection
+    // Initialize Socket.IO connection with authentication
     const socketInstance = io(apiBaseUrl, {
       path: `${basePath}/socket.io/`,
       transports: ['websocket', 'polling'],
@@ -128,11 +138,17 @@ export default function PurchaseOrderImport() {
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
       timeout: 20000,
+      auth: {
+        token: token
+      },
+      extraHeaders: {
+        'Authorization': `Bearer ${token}`
+      }
     });
 
     // Connection event handlers
     socketInstance.on('connect', () => {
-      console.log('Socket.IO connected');
+      console.log('Socket.IO connected with authentication');
       setSocketConnected(true);
       setServerMessages(prev => [...prev, { message: 'Server connected - You are Good to go', isError: false }]);
     });
@@ -147,6 +163,20 @@ export default function PurchaseOrderImport() {
       console.error('Socket.IO connection error:', error);
       setSocketConnected(false);
       setServerMessages(prev => [...prev, { message: `Connection error: ${error.message}`, isError: true }]);
+      
+      // If authentication fails, redirect to login
+      if (error.message.includes('Authentication') || error.message.includes('Unauthorized')) {
+        localStorage.removeItem('bridesbyldToken');
+        window.location.href = '/';
+      }
+    });
+
+    // Authentication error handler
+    socketInstance.on('auth_error', (error) => {
+      console.error('Socket.IO authentication error:', error);
+      setServerMessages(prev => [...prev, { message: `Authentication error: ${error}`, isError: true }]);
+      localStorage.removeItem('bridesbyldToken');
+      window.location.href = '/';
     });
 
     // Message event handler
@@ -156,12 +186,7 @@ export default function PurchaseOrderImport() {
     });
 
     setSocket(socketInstance);
-
-    // Cleanup on unmount
-    return () => {
-      socketInstance.disconnect();
-    };
-  }, []);
+  };
 
   // Load vendors and categories
   useEffect(() => {
