@@ -12,11 +12,6 @@ export default defineConfig(({ mode }) => {
   // Base configuration for Bolt environment
   const boltConfig = {
     plugins: [react()],
-    server: {
-      allowedHosts: ['hushloladre.com'],
-      strictPort: true,
-      hmr: false, // Disable HMR to prevent WebSocket conflicts
-    },
     optimizeDeps: {
       include: ["lucide-react"], // Include lucide-react for proper bundling
       force: true, // Force re-optimization
@@ -41,7 +36,12 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       host: '0.0.0.0',
       allowedHosts: ['hushloladre.com'],
-      hmr: false, // Disable HMR to prevent conflicts with Socket.IO
+      hmr: {
+        clientPort: 443,
+        protocol: "wss",
+        host: "hushloladre.com",
+        port: 5173
+      },
     },
     optimizeDeps: {
       include: ["lucide-react"], // Include lucide-react for proper bundling
@@ -64,4 +64,4 @@ export default defineConfig(({ mode }) => {
   }
 
   return boltConfig;
-});
+};
