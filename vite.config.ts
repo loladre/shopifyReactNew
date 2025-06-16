@@ -35,7 +35,12 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       strictPort: true,
       host: '0.0.0.0',
-      allowedHosts: ['hushloladre.com'],
+      allowedHosts: [
+        'hushloladre.com',
+        'www.hushloladre.com',
+        'localhost',
+        '127.0.0.1'
+      ],
       hmr: {
         clientPort: 443,
         protocol: "wss",
