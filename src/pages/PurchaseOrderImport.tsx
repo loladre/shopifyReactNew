@@ -310,7 +310,6 @@ export default function PurchaseOrderImport() {
     const styleNumberPos = headers.findIndex(h => h && h.toString().includes("Style Number"));
     const colorPos = headers.findIndex(h => h && h.toString().includes("Color"));
     const countryOfOriginPos = headers.findIndex(h => h && h.toString().includes("Country of Origin"));
-    const firstSizePos = countryOfOriginPos + 1;
     const costPos = headers.findIndex(h => h && h.toString().includes("WholeSale"));
     const retailPos = headers.findIndex(h => h && h.toString().includes("Sugg. Retail"));
 
@@ -319,6 +318,18 @@ export default function PurchaseOrderImport() {
       return;
     }
 
+    // Find the range of size columns - they should be between Country of Origin and Sugg. Retail
+    const firstSizePos = countryOfOriginPos + 1;
+    const lastSizePos = retailPos - 1; // Stop before Sugg. Retail column
+
+    if (firstSizePos >= lastSizePos) {
+      setError("No size columns found between Country of Origin and Sugg. Retail");
+      return;
+    }
+
+    console.log(`Processing size columns from ${firstSizePos} to ${lastSizePos}`);
+    console.log("Size columns:", headers.slice(firstSizePos, lastSizePos + 1));
+
     // Extract form data from Excel
     updateFormFromExcel(data);
 
@@ -326,13 +337,15 @@ export default function PurchaseOrderImport() {
     let productCount = 0;
     for (let i = headersPosition + 1; i < data.length; i++) {
       if (!data[i] || !data[i][styleNamePos]) break;
-      for (let j = firstSizePos; j < data[i].length; j++) {
+      for (let j = firstSizePos; j <= lastSizePos; j++) {
         const quantity = data[i][j];
-        if (quantity && quantity !== "0" && headers[j] && !headers[j].toString().includes("Sugg. Retail")) {
+        if (quantity && quantity !== "0" && quantity !== 0) {
           productCount++;
         }
       }
     }
+
+    console.log(`Found ${productCount} products to process`);
 
     // Get SKUs and barcodes
     const token = localStorage.getItem("bridesbyldToken");
@@ -359,9 +372,9 @@ export default function PurchaseOrderImport() {
     for (let i = headersPosition + 1; i < data.length; i++) {
       if (!data[i] || !data[i][styleNamePos]) break;
 
-      for (let j = firstSizePos; j < data[i].length; j++) {
+      for (let j = firstSizePos; j <= lastSizePos; j++) {
         const quantity = data[i][j];
-        if (quantity && quantity !== "0" && headers[j] && !headers[j].toString().includes("Sugg. Retail")) {
+        if (quantity && quantity !== "0" && quantity !== 0) {
           const cost = parseFloat(data[i][costPos]?.toString() || "0") || 0;
           const retail = parseFloat(data[i][retailPos]?.toString() || "0") || 0;
           const margin = retail > 0 ? ((retail - cost) / retail) * 100 : 0;
@@ -394,6 +407,7 @@ export default function PurchaseOrderImport() {
       }
     }
 
+    console.log(`Processed ${newProducts.length} products`);
     setProducts(newProducts);
   };
 
