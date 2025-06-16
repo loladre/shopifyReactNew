@@ -61,6 +61,183 @@ interface Credit {
   amount: number;
 }
 
+// Size mapping objects from your original code
+const selectMapping: { [key: string]: string } = {
+  "Accessories - Belts": "Belts",
+  "Clothing - Swim - Bikinis": "Bikinis",
+  "Clothing - Jackets & Coats - Blazers": "Blazers",
+  "Clothing - Tops - Blouses": "Blouses",
+  "Clothing - Tops - Bodysuits": "Bodysuits",
+  "Shoes - Booties & Boots": "Booties & Boots",
+  "Accessories - Jewelry - Bracelets": "Bracelets",
+  "Handbags - Bucket Bags": "Bucket Bags",
+  "Clothing - Tops - Camis": "Camis",
+  "Handbags - Clutches": "Clutches",
+  "Clothing - Swim - Cover-Ups": "Cover Ups",
+  "Clothing - Tops - Cropped": "Cropped Tops",
+  "Handbags - Crossbody Bags": "Crossbody Bags",
+  "Accessories - Jewelry - Earrings": "Earrings",
+  "Shoes - Espadrilles": "Espadrilles",
+  "Shoes - Sandals - Flats": "Flats",
+  "Accessories - Hair": "Hair",
+  "Handbags - Top-Handle Bags": "Handle Bags",
+  "Accessories - Hats": "Hats",
+  "Shoes - Sandals - Heels": "Heels",
+  "Clothing - Jackets & Coats": "Jackets & Coats",
+  "Clothing - Denim": "Jeans",
+  "Clothing - Jumpsuits": "Jumpsuits",
+  "Clothing - Tops - Knitwear": "Knitwear",
+  "Clothing - Jackets & Coats - Leather": "Leather",
+  "Clothing - Activewear - Leggings": "Leggings",
+  "Clothing - Lingerie": "Lingerie",
+  "Misc - Lip Balm": "Lip Balm",
+  "Clothing - Loungewear": "Loungewear",
+  "Clothing - Dresses - Maxi": "Maxi Dresses",
+  "Clothing - Dresses - Midi": "Midi Dresses",
+  "Clothing - Dresses - Mini": "Mini Dresses",
+  "Shoes - Sandals - Mules": "Mules",
+  "Accessories - Jewelry - Necklaces": "Necklaces",
+  "Clothing - Swim - One Pieces": "One Pieces",
+  "Clothing - Pants": "Pants",
+  "Clothing - Swim - Pareos": "Pareos",
+  "Accessories - Jewelry - Rings": "Rings",
+  "Clothing - Rompers": "Rompers",
+  "Shoes - Sandals - Wedges": "Sandals",
+  "Accessories - Scarves": "Scarves",
+  "Clothing - Shorts": "Shorts",
+  "Handbags - Shoulder Bags": "Shoulder Bags",
+  "Clothing - Skirts": "Skirts",
+  "Shoes - Sneakers": "Sneakers",
+  "Clothing - Activewear - Sports Bras": "Sports Bras",
+  "Accessories - Sunglasses": "Sunglasses",
+  "Clothing - Tops - Sweatshirts & Hoodies": "Sweatshirts & Hoodies",
+  "Clothing - Tops - T-Shirts": "T-Shirts",
+  "Clothing - Tops - Tees & Tanks": "Tees & Tanks",
+  "Clothing - Tops": "Tops",
+  "Handbags - Totes": "Totes",
+  "Accessories - Travel": "Travel",
+  "Clothing - Jackets & Coats - Trench Coats": "Trench Coats",
+  "Handbags - Wristlets": "Wristlets",
+  "Clothing - Denim - Jackets": "Jackets & Coats",
+  "Clothing - Denim - Jeans": "Jeans",
+  "Clothing - Denim - Shorts": "Shorts",
+  "Clothing - Denim - Skirts": "Skirts",
+  "Clothing - Jeans": "Jeans",
+};
+
+const sizeMappings: { [key: string]: { [key: string]: string } } = {
+  france: {
+    "32": "FR32 - (US0)",
+    "34": "FR34 - (US2)",
+    "36": "FR36 - (US4)",
+    "38": "FR38 - (US6)",
+    "40": "FR40 - (US8)",
+    "42": "FR42 - (US10)",
+    "44": "FR44 - (US12)",
+  },
+  australia: {
+    "4": "AU4 - (US0)",
+    "6": "AU6 - (US2)",
+    "8": "AU8 - (US4)",
+    "10": "AU10 - (US6)",
+    "12": "AU12 - (US8)",
+    "14": "AU14 - (US10)",
+    "16": "AU16 - (US12)",
+    "18": "AU18 - (US14)",
+  },
+  us: {
+    "00": "US00",
+    "0": "US0",
+    "2": "US2",
+    "4": "US4",
+    "6": "US6",
+    "8": "US8",
+    "10": "US10",
+    "12": "US12",
+    "14": "US14",
+  },
+  italy: {
+    "36": "IT36 - (US0)",
+    "38": "IT38 - (US2)",
+    "40": "IT40 - (US4)",
+    "42": "IT42 - (US6)",
+    "44": "IT44 - (US8)",
+    "46": "IT46 - (US10)",
+    "48": "IT48 - (US12)",
+  },
+  uk: {
+    "4": "UK4 - (US0)",
+    "6": "UK6 - (US2)",
+    "8": "UK8 - (US4)",
+    "10": "UK10 - (US6)",
+    "12": "UK12 - (US8)",
+    "14": "UK14 - (US10)",
+    "16": "UK16 - (US12)",
+    "18": "UK18 - (US14)",
+  },
+  zimmermann: {
+    "0": "0 - (US0-2)",
+    "1": "1 - (US2-4)",
+    "2": "2 - (US6-8)",
+    "3": "3 - (US8-10)",
+    "4": "4 - (US10-12)",
+  },
+  jd: {
+    "0": "0 - (US0-2)",
+    "1": "1 - (US2-4)",
+    "2": "2 - (US6-8)",
+    "3": "3 - (US8-10)",
+  },
+  lmf: {
+    "1": "1 - (US0-2)",
+    "2": "2 - (US2-4)",
+    "3": "3 - (US6-8)",
+    "4": "4 - (US8-10)",
+  },
+};
+
+const sizeMappingFilters: { [key: string]: { [key: string]: string } } = {
+  france: {
+    "P": "XS", "XS": "XS", "S": "S", "M": "M", "L": "L", "XL": "XL",
+    "32": "XXS", "34": "XS", "36": "S", "38": "M", "40": "M", "42": "L", "44": "XL",
+  },
+  australia: {
+    "4": "XS", "6": "XS", "8": "S", "10": "M", "12": "M", "14": "L", "16": "XL", "18": "XL",
+    "P": "XS", "XS": "XS", "S": "S", "M": "M", "L": "L", "XL": "XL",
+  },
+  us: {
+    "00": "XXS", "0": "XS", "2": "XS", "4": "S", "6": "M", "8": "M", "10": "L", "12": "XL", "14": "XL",
+    "P": "XS", "XS": "XS", "S": "S", "M": "M", "L": "L", "XL": "XL",
+  },
+  italy: {
+    "36": "XS", "38": "XS", "40": "S", "42": "M", "44": "M", "46": "L", "48": "XL",
+    "P": "XS", "XS": "XS", "S": "S", "M": "M", "L": "L", "XL": "XL",
+  },
+  uk: {
+    "4": "XS", "6": "XS", "8": "S", "10": "M", "12": "M", "14": "L", "16": "XL", "18": "XL",
+    "P": "XS", "XS": "XS", "S": "S", "M": "M", "L": "L", "XL": "XL",
+  },
+  zimmermann: {
+    "0": "XS", "1": "S", "2": "M", "3": "L", "4": "XL",
+    "P": "XS", "XS": "XS", "S": "S", "M": "M", "L": "L", "XL": "XL",
+  },
+  jd: {
+    "0": "XS", "1": "S", "2": "M", "3": "L",
+    "P": "XS", "XS": "XS", "S": "S", "M": "M", "L": "L", "XL": "XL",
+  },
+  lmf: {
+    "1": "XS", "2": "S", "3": "M", "4": "L",
+    "P": "XS", "XS": "XS", "S": "S", "M": "M", "L": "L", "XL": "XL",
+  },
+};
+
+const shoeSizeFilter: { [key: string]: string } = {
+  "6": "6", "6.5": "6.5", "7": "7", "7.5": "7.5", "8": "8", "8.5": "8.5",
+  "9": "9", "9.5": "9.5", "10": "10", "10.5": "10.5", "11": "11",
+  "36": "6", "36.5": "6.5", "37": "7", "37.5": "7.5", "38": "8", "38.5": "8.5",
+  "39": "9", "39.5": "9.5", "40": "10", "40.5": "10.5", "41": "11",
+};
+
 export default function PurchaseOrderImport() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -87,7 +264,7 @@ export default function PurchaseOrderImport() {
     sizing: "australia",
     season: "Fall",
     brandSeason: "",
-    yearSeason: "23",
+    yearSeason: "26",
     terms: "100% Before Delivery",
     deposit: "0",
     delivery: "100",
@@ -421,7 +598,7 @@ export default function PurchaseOrderImport() {
       if (data[i] && data[i][1]) {
         const vendorName = data[i][1].toString().trim();
         if (vendorName && vendorName.length > 2) {
-          setFormData((prev) => ({ ...prev, newVendor: vendorName }));
+          setFormData((prev) => ({ ...prev, newVendor: vendorName, brandSeason: vendorName }));
           break;
         }
       }
@@ -550,7 +727,14 @@ export default function PurchaseOrderImport() {
     setProducts(products.map(product => {
       const productStyleKey = `${product.style}-${product.color}`;
       if (selectedProductStyles.has(productStyleKey)) {
-        return { ...product, [field]: value };
+        let updatedProduct = { ...product, [field]: value };
+        
+        // If applying category, also update metaCategory
+        if (field === 'category' && selectMapping[value]) {
+          updatedProduct.metaCategory = selectMapping[value];
+        }
+        
+        return updatedProduct;
       }
       return product;
     }));
@@ -591,7 +775,14 @@ export default function PurchaseOrderImport() {
     setProducts(products.map(product => {
       const productStyleKey = `${product.style}-${product.color}`;
       if (selectedProductStyles.has(productStyleKey)) {
-        return { ...product, [field]: field === 'preorder' ? false : '' };
+        let updatedProduct = { ...product, [field]: field === 'preorder' ? false : '' };
+        
+        // If clearing category, also clear metaCategory
+        if (field === 'category') {
+          updatedProduct.metaCategory = '';
+        }
+        
+        return updatedProduct;
       }
       return product;
     }));
@@ -609,6 +800,94 @@ export default function PurchaseOrderImport() {
       ...prev,
       { 
         message: `Cleared ${field} from ${affectedCount} products across ${selectedProductStyles.size} style(s)`, 
+        isError: false 
+      }
+    ]);
+  };
+
+  // Apply season to selected products
+  const applySeason = () => {
+    const seasonString = `${formData.season} ${formData.brandSeason} ${formData.yearSeason}`;
+    applyToSelected('season', seasonString);
+  };
+
+  // Clear season from selected products
+  const clearSeason = () => {
+    clearFromSelected('season');
+  };
+
+  // Apply standard sizing to selected products
+  const applyStandardSizing = () => {
+    const selectedProductStyles = new Set(
+      products
+        .filter(product => product.selected)
+        .map(product => `${product.style}-${product.color}`)
+    );
+
+    if (selectedProductStyles.size === 0) {
+      setError("Please select at least one product first");
+      return;
+    }
+
+    const sizeMapping = sizeMappings[formData.sizing];
+    const sizeMappingFilter = sizeMappingFilters[formData.sizing];
+
+    setProducts(products.map(product => {
+      const productStyleKey = `${product.style}-${product.color}`;
+      if (selectedProductStyles.has(productStyleKey)) {
+        let updatedProduct = { ...product };
+        const originalSize = product.size;
+        const category = product.category.toLowerCase();
+
+        // Update size display if mapping exists
+        if (sizeMapping && sizeMapping[originalSize]) {
+          updatedProduct.size = sizeMapping[originalSize];
+        }
+
+        // Update sizing fields based on category
+        if (category.includes('jeans') || category.includes('denim')) {
+          if (category.includes('shorts')) {
+            // For denim shorts, use clothing size mapping
+            if (sizeMappingFilter && sizeMappingFilter[originalSize]) {
+              updatedProduct.clothingSize = sizeMappingFilter[originalSize];
+            } else {
+              updatedProduct.clothingSize = originalSize;
+            }
+          } else {
+            // For jeans, use original size
+            updatedProduct.jeansSize = originalSize;
+          }
+        } else if (category.includes('shoes')) {
+          // For shoes, use shoe size filter
+          if (shoeSizeFilter[originalSize]) {
+            updatedProduct.shoeSize = shoeSizeFilter[originalSize];
+          } else {
+            updatedProduct.shoeSize = originalSize;
+          }
+        } else if (category.includes('clothing')) {
+          // For clothing, use clothing size mapping
+          if (sizeMappingFilter && sizeMappingFilter[originalSize]) {
+            updatedProduct.clothingSize = sizeMappingFilter[originalSize];
+          } else {
+            updatedProduct.clothingSize = originalSize;
+          }
+        }
+
+        return updatedProduct;
+      }
+      return product;
+    }));
+
+    // Show success message
+    const affectedCount = products.filter(product => {
+      const productStyleKey = `${product.style}-${product.color}`;
+      return selectedProductStyles.has(productStyleKey);
+    }).length;
+    
+    setServerMessages(prev => [
+      ...prev,
+      { 
+        message: `Applied ${formData.sizing} sizing to ${affectedCount} products across ${selectedProductStyles.size} style(s)`, 
         isError: false 
       }
     ]);
@@ -668,6 +947,9 @@ export default function PurchaseOrderImport() {
       setIsLoading(false);
     }
   };
+
+  // Generate year options from 26 to 40
+  const yearOptions = Array.from({ length: 15 }, (_, i) => (26 + i).toString());
 
   return (
     <Layout title="New Draft Order" showHeader={true} showFooter={false}>
@@ -819,6 +1101,58 @@ export default function PurchaseOrderImport() {
           <p className="text-sm text-slate-600 mb-4">
             Select products by checking the boxes, then apply changes to all sizes of the same style.
           </p>
+          
+          {/* Season Controls */}
+          <div className="mb-6 p-4 bg-slate-50 rounded-lg">
+            <h4 className="text-md font-semibold text-slate-900 mb-3">Season</h4>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={formData.season}
+                onChange={(e) => setFormData({ ...formData, season: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 max-w-32"
+              >
+                <option value="Resort">Resort</option>
+                <option value="Spring">Spring</option>
+                <option value="Summer">Summer</option>
+                <option value="Fall">Fall</option>
+                <option value="Personal">Personal</option>
+                <option value="Consignment">Consignment</option>
+              </select>
+              
+              <select
+                value={formData.brandSeason}
+                onChange={(e) => setFormData({ ...formData, brandSeason: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 max-w-64"
+              >
+                <option value="">Select a Vendor Name</option>
+                {vendors.map((vendor) => (
+                  <option key={vendor} value={vendor}>
+                    {vendor}
+                  </option>
+                ))}
+              </select>
+              
+              <select
+                value={formData.yearSeason}
+                onChange={(e) => setFormData({ ...formData, yearSeason: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 max-w-20"
+              >
+                {yearOptions.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+              
+              <Button size="sm" onClick={applySeason}>
+                Apply
+              </Button>
+              <Button size="sm" variant="danger" onClick={clearSeason}>
+                Delete
+              </Button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <FormField label="Category">
               <div className="flex gap-2">
@@ -885,10 +1219,7 @@ export default function PurchaseOrderImport() {
                   <option value="jd">Juliet Dunn</option>
                   <option value="lmf">Lisa Marie Fernandez</option>
                 </select>
-                <Button 
-                  size="sm" 
-                  onClick={() => applyToSelected("sizing", formData.sizing)}
-                >
+                <Button size="sm" onClick={applyStandardSizing}>
                   Apply
                 </Button>
                 <Button size="sm" variant="danger" onClick={() => clearFromSelected("sizing")}>
@@ -965,45 +1296,25 @@ export default function PurchaseOrderImport() {
                         )}
                       </button>
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      Name
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      Style
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      Color
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      Size
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      Qty
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      Cost
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      Retail
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      SKU
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      Barcode
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      Category
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      Preorder
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      Margin
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      Total
-                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Name</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Style</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Color</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Size</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Qty</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Cost</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Retail</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">SKU</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Barcode</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Season</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">P-Type</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Tags</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Preorder</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Margin</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Total</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">S.S</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">C.S</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">J.S</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">CAT</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -1025,20 +1336,14 @@ export default function PurchaseOrderImport() {
                       <td className="px-4 py-3 text-sm text-slate-600">{product.style}</td>
                       <td className="px-4 py-3 text-sm text-slate-600">{product.color}</td>
                       <td className="px-4 py-3 text-sm text-slate-600">{product.size}</td>
-                      <td className="px-4 py-3 text-sm text-slate-900 font-medium">
-                        {product.quantity}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-900">
-                        ${product.cost.toFixed(2)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-900">
-                        ${product.retail.toFixed(2)}
-                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-900 font-medium">{product.quantity}</td>
+                      <td className="px-4 py-3 text-sm text-slate-900">${product.cost.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-sm text-slate-900">${product.retail.toFixed(2)}</td>
                       <td className="px-4 py-3 text-sm text-slate-600 font-mono">{product.sku}</td>
-                      <td className="px-4 py-3 text-sm text-slate-600 font-mono">
-                        {product.barcode}
-                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-600 font-mono">{product.barcode}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{product.season}</td>
                       <td className="px-4 py-3 text-sm text-slate-600">{product.category}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{product.tags}</td>
                       <td className="px-4 py-3">
                         <span
                           className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
@@ -1050,12 +1355,12 @@ export default function PurchaseOrderImport() {
                           {product.preorder ? "Yes" : "No"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-900">
-                        {product.margin.toFixed(1)}%
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-900 font-medium">
-                        ${product.total.toFixed(2)}
-                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-900">{product.margin.toFixed(1)}%</td>
+                      <td className="px-4 py-3 text-sm text-slate-900 font-medium">${product.total.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{product.shoeSize}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{product.clothingSize}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{product.jeansSize}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{product.metaCategory}</td>
                     </tr>
                   ))}
                 </tbody>
