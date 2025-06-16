@@ -18,7 +18,7 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-import * as XLSX from "xlsx";
+import * as ExcelJS from "exceljs";
 import { io, Socket } from "socket.io-client";
 
 interface Product {
@@ -266,43 +266,58 @@ export default function PurchaseOrderImport() {
     setError("");
 
     try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: "array" });
-          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+      const arrayBuffer = await selectedFile.arrayBuffer();
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(arrayBuffer);
+      
+      const worksheet = workbook.getWorksheet(1); // Get first worksheet
+      if (!worksheet) {
+        throw new Error("No worksheet found in the Excel file");
+      }
 
-          await processExcelData(jsonData);
-        } catch (error) {
-          setError("Failed to process Excel file");
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      reader.readAsArrayBuffer(selectedFile);
+      await processExcelData(worksheet);
     } catch (error) {
-      setError("Failed to read file");
+      console.error("Error processing Excel file:", error);
+      setError(error instanceof Error ? error.message : "Failed to process Excel file");
+    } finally {
       setIsLoading(false);
     }
   };
 
-  const processExcelData = async (data: any[][]) => {
+  const processExcelData = async (worksheet: ExcelJS.Worksheet) => {
+    // Convert worksheet to array format for easier processing
+    const data: any[][] = [];
+    worksheet.eachRow((row, rowNumber) => {
+      const rowData: any[] = [];
+      row.eachCell((cell, colNumber) => {
+        rowData[colNumber - 1] = cell.value;
+      });
+      data[rowNumber - 1] = rowData;
+    });
+
     // Find header positions
-    let headersPosition = data.findIndex((row) => row.includes("Style Name"));
+    let headersPosition = data.findIndex((row) => 
+      row && row.some(cell => cell && cell.toString().includes("Style Name"))
+    );
+    
     if (headersPosition === -1) {
       setError("Invalid Excel format - Style Name column not found");
       return;
     }
 
     const headers = data[headersPosition];
-    const styleNamePos = headers.indexOf("Style Name");
-    const styleNumberPos = headers.indexOf("Style Number");
-    const colorPos = headers.indexOf("Color");
-    const firstSizePos = headers.indexOf("Country of Origin") + 1;
-    const costPos = headers.indexOf("WholeSale (USD)");
-    const retailPos = headers.indexOf("Sugg. Retail (USD)");
+    const styleNamePos = headers.findIndex(h => h && h.toString().includes("Style Name"));
+    const styleNumberPos = headers.findIndex(h => h && h.toString().includes("Style Number"));
+    const colorPos = headers.findIndex(h => h && h.toString().includes("Color"));
+    const countryOfOriginPos = headers.findIndex(h => h && h.toString().includes("Country of Origin"));
+    const firstSizePos = countryOfOriginPos + 1;
+    const costPos = headers.findIndex(h => h && h.toString().includes("WholeSale"));
+    const retailPos = headers.findIndex(h => h && h.toString().includes("Sugg. Retail"));
+
+    if (styleNamePos === -1 || styleNumberPos === -1 || colorPos === -1) {
+      setError("Required columns not found in Excel file");
+      return;
+    }
 
     // Extract form data from Excel
     updateFormFromExcel(data);
@@ -310,9 +325,10 @@ export default function PurchaseOrderImport() {
     // Count products for SKU/barcode generation
     let productCount = 0;
     for (let i = headersPosition + 1; i < data.length; i++) {
-      if (!data[i][styleNamePos]) break;
+      if (!data[i] || !data[i][styleNamePos]) break;
       for (let j = firstSizePos; j < data[i].length; j++) {
-        if (data[i][j] && data[i][j] !== "0" && headers[j] !== "Sugg. Retail (USD)") {
+        const quantity = data[i][j];
+        if (quantity && quantity !== "0" && headers[j] && !headers[j].toString().includes("Sugg. Retail")) {
           productCount++;
         }
       }
@@ -341,33 +357,34 @@ export default function PurchaseOrderImport() {
     let barcodeIndex = 0;
 
     for (let i = headersPosition + 1; i < data.length; i++) {
-      if (!data[i][styleNamePos]) break;
+      if (!data[i] || !data[i][styleNamePos]) break;
 
       for (let j = firstSizePos; j < data[i].length; j++) {
         const quantity = data[i][j];
-        if (quantity && quantity !== "0" && headers[j] !== "Sugg. Retail (USD)") {
-          const cost = parseFloat(data[i][costPos]) || 0;
-          const retail = parseFloat(data[i][retailPos]) || 0;
+        if (quantity && quantity !== "0" && headers[j] && !headers[j].toString().includes("Sugg. Retail")) {
+          const cost = parseFloat(data[i][costPos]?.toString() || "0") || 0;
+          const retail = parseFloat(data[i][retailPos]?.toString() || "0") || 0;
           const margin = retail > 0 ? ((retail - cost) / retail) * 100 : 0;
+          const quantityNum = parseInt(quantity.toString()) || 0;
 
           newProducts.push({
             id: `${i}-${j}`,
             selected: false,
             name: `${data[i][styleNamePos]} ${data[i][styleNumberPos]} ${data[i][colorPos]}`,
-            style: data[i][styleNumberPos],
-            color: data[i][colorPos],
-            size: headers[j],
-            quantity: parseInt(quantity),
+            style: data[i][styleNumberPos]?.toString() || "",
+            color: data[i][colorPos]?.toString() || "",
+            size: headers[j]?.toString() || "",
+            quantity: quantityNum,
             cost,
             retail,
-            sku: skus[skuIndex++],
-            barcode: barcodes[barcodeIndex++],
+            sku: skus[skuIndex++] || "",
+            barcode: barcodes[barcodeIndex++] || "",
             season: "",
             category: "",
             tags: "",
             preorder: false,
             margin,
-            total: cost * parseInt(quantity),
+            total: cost * quantityNum,
             shoeSize: "",
             clothingSize: "",
             jeansSize: "",
@@ -381,43 +398,97 @@ export default function PurchaseOrderImport() {
   };
 
   const updateFormFromExcel = (data: any[][]) => {
-    // Extract vendor name
-    const vendorName = data[1]?.[1];
-    if (vendorName) {
-      setFormData((prev) => ({ ...prev, newVendor: vendorName }));
+    // Extract vendor name - look for it in the first few rows
+    for (let i = 0; i < Math.min(5, data.length); i++) {
+      if (data[i] && data[i][1]) {
+        const vendorName = data[i][1].toString().trim();
+        if (vendorName && vendorName.length > 2) {
+          setFormData((prev) => ({ ...prev, newVendor: vendorName }));
+          break;
+        }
+      }
     }
 
     // Extract PO number
-    const poRow = data.findIndex((row) => row.includes("PO Number:"));
+    const poRow = data.findIndex((row) => 
+      row && row.some(cell => cell && cell.toString().includes("PO Number"))
+    );
     if (poRow !== -1) {
-      const poNumber = data[poRow][data[poRow].indexOf("PO Number:") + 1];
-      setFormData((prev) => ({ ...prev, brandPO: poNumber }));
+      const poIndex = data[poRow].findIndex(cell => cell && cell.toString().includes("PO Number"));
+      if (poIndex !== -1 && data[poRow][poIndex + 1]) {
+        const poNumber = data[poRow][poIndex + 1].toString();
+        setFormData((prev) => ({ ...prev, brandPO: poNumber }));
+      }
     }
 
     // Extract dates
-    const createdRow = data.findIndex((row) => row.includes("Created Date:"));
+    const createdRow = data.findIndex((row) => 
+      row && row.some(cell => cell && cell.toString().includes("Created Date"))
+    );
     if (createdRow !== -1) {
-      const createdDate = data[createdRow][data[createdRow].indexOf("Created Date:") + 1];
-      setFormData((prev) => ({ ...prev, createdDate: formatDate(createdDate) }));
+      const createdIndex = data[createdRow].findIndex(cell => cell && cell.toString().includes("Created Date"));
+      if (createdIndex !== -1 && data[createdRow][createdIndex + 1]) {
+        const createdDate = data[createdRow][createdIndex + 1];
+        setFormData((prev) => ({ ...prev, createdDate: formatDate(createdDate) }));
+      }
     }
 
-    const datesRow = data.findIndex((row) => row.includes("Dates"));
+    // Extract ship and complete dates
+    const datesRow = data.findIndex((row) => 
+      row && row.some(cell => cell && cell.toString().includes("Dates"))
+    );
     if (datesRow !== -1) {
-      const shipDate = data[datesRow + 1]?.[data[datesRow].indexOf("Dates")]?.split(": ")[1];
-      const completeDate = data[datesRow + 2]?.[data[datesRow].indexOf("Dates")]?.split(": ")[1];
-
-      setFormData((prev) => ({
-        ...prev,
-        startShipDate: shipDate ? formatDate(shipDate) : "",
-        completeDate: completeDate ? formatDate(completeDate) : "",
-      }));
+      // Look for dates in subsequent rows
+      for (let i = datesRow + 1; i < Math.min(datesRow + 5, data.length); i++) {
+        if (data[i]) {
+          const rowText = data[i].join(" ").toString();
+          if (rowText.includes("Ship") || rowText.includes("Start")) {
+            const dateMatch = rowText.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/);
+            if (dateMatch) {
+              setFormData((prev) => ({ ...prev, startShipDate: formatDate(dateMatch[1]) }));
+            }
+          }
+          if (rowText.includes("Complete") || rowText.includes("End")) {
+            const dateMatch = rowText.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/);
+            if (dateMatch) {
+              setFormData((prev) => ({ ...prev, completeDate: formatDate(dateMatch[1]) }));
+            }
+          }
+        }
+      }
     }
   };
 
-  const formatDate = (dateStr: string): string => {
-    const parts = dateStr.split("/");
-    const date = new Date(+parts[2], +parts[0] - 1, +parts[1]);
-    return date.toISOString().split("T")[0];
+  const formatDate = (dateInput: any): string => {
+    try {
+      let date: Date;
+      
+      if (dateInput instanceof Date) {
+        date = dateInput;
+      } else if (typeof dateInput === 'string') {
+        // Handle MM/DD/YYYY format
+        const parts = dateInput.split("/");
+        if (parts.length === 3) {
+          const month = parseInt(parts[0]) - 1; // Month is 0-indexed
+          const day = parseInt(parts[1]);
+          const year = parseInt(parts[2]);
+          date = new Date(year, month, day);
+        } else {
+          date = new Date(dateInput);
+        }
+      } else {
+        date = new Date(dateInput);
+      }
+      
+      if (isNaN(date.getTime())) {
+        return "";
+      }
+      
+      return date.toISOString().split("T")[0];
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "";
+    }
   };
 
   const calculateTotals = () => {
