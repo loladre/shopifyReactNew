@@ -28,7 +28,7 @@ export default function Layout({
     <div className={`min-h-screen flex flex-col bg-gradient-to-br from-slate-50 to-slate-100 ${className}`}>
       {showHeader && <Header />}
       
-      <main className="flex-1 relative">
+      <main className="flex-1 relative w-full">
         {children}
       </main>
       

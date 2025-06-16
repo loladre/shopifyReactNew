@@ -6,7 +6,7 @@ import { AlertTriangle, Clock } from 'lucide-react';
 export default function LateOrders() {
   return (
     <Layout title="Late Orders">
-      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      <div className="w-full px-6 py-6 space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Late Orders</h1>
