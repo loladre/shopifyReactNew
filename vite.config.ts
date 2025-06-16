@@ -14,6 +14,9 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       allowedHosts: ['hushloladre.com'],
+      hmr: {
+        port: 5173,
+      },
     },
     optimizeDeps: {
       exclude: ["lucide-react"],
@@ -27,13 +30,12 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       strictPort: true,
-      origin: "https://hushloladre.com",
-      hmr: {
-        clientPort: 443,
-        protocol: "ws",
-        host: "hushloladre.com",
-      },
+      host: '0.0.0.0',
       allowedHosts: ['hushloladre.com'],
+      hmr: {
+        port: 5173,
+        host: 'hushloladre.com',
+      },
     },
     optimizeDeps: {
       exclude: ["lucide-react"],

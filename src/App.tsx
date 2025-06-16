@@ -86,7 +86,7 @@ function LoginPage() {
         if (data.token) {
           localStorage.setItem('bridesbyldToken', data.token);
         }
-        // Redirect to purchase order page instead of external URL
+        // Redirect to purchase order page
         window.location.href = '/purchase-order';
       }
     } catch (err) {

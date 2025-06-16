@@ -133,7 +133,7 @@ export default function PurchaseOrderImport() {
 
     // Initialize Socket.IO connection with authentication
     const socketInstance = io(apiBaseUrl, {
-      path: `${apiBaseUrl}/socket.io/`,
+      path: `${basePath}/socket.io/`,
       transports: ["websocket", "polling"],
       autoConnect: true,
       reconnection: true,
