@@ -87,7 +87,7 @@ function LoginPage() {
           localStorage.setItem('bridesbyldToken', data.token);
         }
         // Navigate to purchase order page using React Router
-        window.location.href = '/purchase-order';
+        window.location.href = `${basePath}/shopifyreact/purchase-order`;
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred during login');
@@ -238,8 +238,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  // Get the base path from environment
+  const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
+  const routerBasename = basePath ? `${basePath}/shopifyreact` : '/shopifyreact';
+
   return (
-    <Router>
+    <Router basename={routerBasename}>
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route 
