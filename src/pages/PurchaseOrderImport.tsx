@@ -21,6 +21,23 @@ import {
 import * as ExcelJS from "exceljs";
 import { io, Socket } from "socket.io-client";
 
+// Import size conversion utilities
+import {
+  selectMapping,
+  sizeMappings,
+  sizeMappingFilters,
+  shoeSizeFilter,
+  getSizeMapping,
+  getSizeMappingFilter,
+  getMetaCategory,
+  convertShoeSize,
+  getProductType,
+  isDenimShorts,
+  sizingOptions,
+  seasonOptions,
+  yearOptions,
+} from "../utils/sizeConversions";
+
 interface Product {
   id: string;
   selected: boolean;
@@ -60,183 +77,6 @@ interface Credit {
   method: string;
   amount: number;
 }
-
-// Size mapping objects from your original code
-const selectMapping: { [key: string]: string } = {
-  "Accessories - Belts": "Belts",
-  "Clothing - Swim - Bikinis": "Bikinis",
-  "Clothing - Jackets & Coats - Blazers": "Blazers",
-  "Clothing - Tops - Blouses": "Blouses",
-  "Clothing - Tops - Bodysuits": "Bodysuits",
-  "Shoes - Booties & Boots": "Booties & Boots",
-  "Accessories - Jewelry - Bracelets": "Bracelets",
-  "Handbags - Bucket Bags": "Bucket Bags",
-  "Clothing - Tops - Camis": "Camis",
-  "Handbags - Clutches": "Clutches",
-  "Clothing - Swim - Cover-Ups": "Cover Ups",
-  "Clothing - Tops - Cropped": "Cropped Tops",
-  "Handbags - Crossbody Bags": "Crossbody Bags",
-  "Accessories - Jewelry - Earrings": "Earrings",
-  "Shoes - Espadrilles": "Espadrilles",
-  "Shoes - Sandals - Flats": "Flats",
-  "Accessories - Hair": "Hair",
-  "Handbags - Top-Handle Bags": "Handle Bags",
-  "Accessories - Hats": "Hats",
-  "Shoes - Sandals - Heels": "Heels",
-  "Clothing - Jackets & Coats": "Jackets & Coats",
-  "Clothing - Denim": "Jeans",
-  "Clothing - Jumpsuits": "Jumpsuits",
-  "Clothing - Tops - Knitwear": "Knitwear",
-  "Clothing - Jackets & Coats - Leather": "Leather",
-  "Clothing - Activewear - Leggings": "Leggings",
-  "Clothing - Lingerie": "Lingerie",
-  "Misc - Lip Balm": "Lip Balm",
-  "Clothing - Loungewear": "Loungewear",
-  "Clothing - Dresses - Maxi": "Maxi Dresses",
-  "Clothing - Dresses - Midi": "Midi Dresses",
-  "Clothing - Dresses - Mini": "Mini Dresses",
-  "Shoes - Sandals - Mules": "Mules",
-  "Accessories - Jewelry - Necklaces": "Necklaces",
-  "Clothing - Swim - One Pieces": "One Pieces",
-  "Clothing - Pants": "Pants",
-  "Clothing - Swim - Pareos": "Pareos",
-  "Accessories - Jewelry - Rings": "Rings",
-  "Clothing - Rompers": "Rompers",
-  "Shoes - Sandals - Wedges": "Sandals",
-  "Accessories - Scarves": "Scarves",
-  "Clothing - Shorts": "Shorts",
-  "Handbags - Shoulder Bags": "Shoulder Bags",
-  "Clothing - Skirts": "Skirts",
-  "Shoes - Sneakers": "Sneakers",
-  "Clothing - Activewear - Sports Bras": "Sports Bras",
-  "Accessories - Sunglasses": "Sunglasses",
-  "Clothing - Tops - Sweatshirts & Hoodies": "Sweatshirts & Hoodies",
-  "Clothing - Tops - T-Shirts": "T-Shirts",
-  "Clothing - Tops - Tees & Tanks": "Tees & Tanks",
-  "Clothing - Tops": "Tops",
-  "Handbags - Totes": "Totes",
-  "Accessories - Travel": "Travel",
-  "Clothing - Jackets & Coats - Trench Coats": "Trench Coats",
-  "Handbags - Wristlets": "Wristlets",
-  "Clothing - Denim - Jackets": "Jackets & Coats",
-  "Clothing - Denim - Jeans": "Jeans",
-  "Clothing - Denim - Shorts": "Shorts",
-  "Clothing - Denim - Skirts": "Skirts",
-  "Clothing - Jeans": "Jeans",
-};
-
-const sizeMappings: { [key: string]: { [key: string]: string } } = {
-  france: {
-    "32": "FR32 - (US0)",
-    "34": "FR34 - (US2)",
-    "36": "FR36 - (US4)",
-    "38": "FR38 - (US6)",
-    "40": "FR40 - (US8)",
-    "42": "FR42 - (US10)",
-    "44": "FR44 - (US12)",
-  },
-  australia: {
-    "4": "AU4 - (US0)",
-    "6": "AU6 - (US2)",
-    "8": "AU8 - (US4)",
-    "10": "AU10 - (US6)",
-    "12": "AU12 - (US8)",
-    "14": "AU14 - (US10)",
-    "16": "AU16 - (US12)",
-    "18": "AU18 - (US14)",
-  },
-  us: {
-    "00": "US00",
-    "0": "US0",
-    "2": "US2",
-    "4": "US4",
-    "6": "US6",
-    "8": "US8",
-    "10": "US10",
-    "12": "US12",
-    "14": "US14",
-  },
-  italy: {
-    "36": "IT36 - (US0)",
-    "38": "IT38 - (US2)",
-    "40": "IT40 - (US4)",
-    "42": "IT42 - (US6)",
-    "44": "IT44 - (US8)",
-    "46": "IT46 - (US10)",
-    "48": "IT48 - (US12)",
-  },
-  uk: {
-    "4": "UK4 - (US0)",
-    "6": "UK6 - (US2)",
-    "8": "UK8 - (US4)",
-    "10": "UK10 - (US6)",
-    "12": "UK12 - (US8)",
-    "14": "UK14 - (US10)",
-    "16": "UK16 - (US12)",
-    "18": "UK18 - (US14)",
-  },
-  zimmermann: {
-    "0": "0 - (US0-2)",
-    "1": "1 - (US2-4)",
-    "2": "2 - (US6-8)",
-    "3": "3 - (US8-10)",
-    "4": "4 - (US10-12)",
-  },
-  jd: {
-    "0": "0 - (US0-2)",
-    "1": "1 - (US2-4)",
-    "2": "2 - (US6-8)",
-    "3": "3 - (US8-10)",
-  },
-  lmf: {
-    "1": "1 - (US0-2)",
-    "2": "2 - (US2-4)",
-    "3": "3 - (US6-8)",
-    "4": "4 - (US8-10)",
-  },
-};
-
-const sizeMappingFilters: { [key: string]: { [key: string]: string } } = {
-  france: {
-    "P": "XS", "XS": "XS", "S": "S", "M": "M", "L": "L", "XL": "XL",
-    "32": "XXS", "34": "XS", "36": "S", "38": "M", "40": "M", "42": "L", "44": "XL",
-  },
-  australia: {
-    "4": "XS", "6": "XS", "8": "S", "10": "M", "12": "M", "14": "L", "16": "XL", "18": "XL",
-    "P": "XS", "XS": "XS", "S": "S", "M": "M", "L": "L", "XL": "XL",
-  },
-  us: {
-    "00": "XXS", "0": "XS", "2": "XS", "4": "S", "6": "M", "8": "M", "10": "L", "12": "XL", "14": "XL",
-    "P": "XS", "XS": "XS", "S": "S", "M": "M", "L": "L", "XL": "XL",
-  },
-  italy: {
-    "36": "XS", "38": "XS", "40": "S", "42": "M", "44": "M", "46": "L", "48": "XL",
-    "P": "XS", "XS": "XS", "S": "S", "M": "M", "L": "L", "XL": "XL",
-  },
-  uk: {
-    "4": "XS", "6": "XS", "8": "S", "10": "M", "12": "M", "14": "L", "16": "XL", "18": "XL",
-    "P": "XS", "XS": "XS", "S": "S", "M": "M", "L": "L", "XL": "XL",
-  },
-  zimmermann: {
-    "0": "XS", "1": "S", "2": "M", "3": "L", "4": "XL",
-    "P": "XS", "XS": "XS", "S": "S", "M": "M", "L": "L", "XL": "XL",
-  },
-  jd: {
-    "0": "XS", "1": "S", "2": "M", "3": "L",
-    "P": "XS", "XS": "XS", "S": "S", "M": "M", "L": "L", "XL": "XL",
-  },
-  lmf: {
-    "1": "XS", "2": "S", "3": "M", "4": "L",
-    "P": "XS", "XS": "XS", "S": "S", "M": "M", "L": "L", "XL": "XL",
-  },
-};
-
-const shoeSizeFilter: { [key: string]: string } = {
-  "6": "6", "6.5": "6.5", "7": "7", "7.5": "7.5", "8": "8", "8.5": "8.5",
-  "9": "9", "9.5": "9.5", "10": "10", "10.5": "10.5", "11": "11",
-  "36": "6", "36.5": "6.5", "37": "7", "37.5": "7.5", "38": "8", "38.5": "8.5",
-  "39": "9", "39.5": "9.5", "40": "10", "40.5": "10.5", "41": "11",
-};
 
 export default function PurchaseOrderImport() {
   const [isLoading, setIsLoading] = useState(false);
@@ -598,7 +438,7 @@ export default function PurchaseOrderImport() {
       if (data[i] && data[i][1]) {
         const vendorName = data[i][1].toString().trim();
         if (vendorName && vendorName.length > 2) {
-          setFormData((prev) => ({ ...prev, newVendor: vendorName, brandSeason: vendorName }));
+          setFormData((prev) => ({ ...prev, newVendor: vendorName }));
           break;
         }
       }
@@ -709,77 +549,25 @@ export default function PurchaseOrderImport() {
     );
   };
 
-  // Updated function to apply changes to all products with the same style/name
   const applyToSelected = (field: string, value: any) => {
-    // Get the styles/names of all selected products
-    const selectedProductStyles = new Set(
-      products
-        .filter(product => product.selected)
-        .map(product => `${product.style}-${product.color}`) // Use style + color as unique identifier
+    const selectedProducts = products.filter(p => p.selected);
+    if (selectedProducts.length === 0) return;
+
+    // Get unique style+color combinations from selected products
+    const uniqueStyles = new Set(
+      selectedProducts.map(p => `${p.style}-${p.color}`)
     );
 
-    if (selectedProductStyles.size === 0) {
-      setError("Please select at least one product first");
-      return;
-    }
-
-    // Apply the change to all products that match any of the selected styles
-    setProducts(products.map(product => {
-      const productStyleKey = `${product.style}-${product.color}`;
-      if (selectedProductStyles.has(productStyleKey)) {
-        let updatedProduct = { ...product, [field]: value };
+    let updatedCount = 0;
+    setProducts(products.map((product) => {
+      const styleColorKey = `${product.style}-${product.color}`;
+      if (uniqueStyles.has(styleColorKey)) {
+        updatedCount++;
+        const updatedProduct = { ...product, [field]: value };
         
         // If applying category, also update metaCategory
-        if (field === 'category' && selectMapping[value]) {
-          updatedProduct.metaCategory = selectMapping[value];
-        }
-        
-        return updatedProduct;
-      }
-      return product;
-    }));
-
-    // Clear error if it was set
-    setError("");
-    
-    // Show success message
-    const affectedCount = products.filter(product => {
-      const productStyleKey = `${product.style}-${product.color}`;
-      return selectedProductStyles.has(productStyleKey);
-    }).length;
-    
-    setServerMessages(prev => [
-      ...prev,
-      { 
-        message: `Applied ${field} to ${affectedCount} products across ${selectedProductStyles.size} style(s)`, 
-        isError: false 
-      }
-    ]);
-  };
-
-  // Updated function to clear field for selected product styles
-  const clearFromSelected = (field: string) => {
-    // Get the styles/names of all selected products
-    const selectedProductStyles = new Set(
-      products
-        .filter(product => product.selected)
-        .map(product => `${product.style}-${product.color}`) // Use style + color as unique identifier
-    );
-
-    if (selectedProductStyles.size === 0) {
-      setError("Please select at least one product first");
-      return;
-    }
-
-    // Clear the field for all products that match any of the selected styles
-    setProducts(products.map(product => {
-      const productStyleKey = `${product.style}-${product.color}`;
-      if (selectedProductStyles.has(productStyleKey)) {
-        let updatedProduct = { ...product, [field]: field === 'preorder' ? false : '' };
-        
-        // If clearing category, also clear metaCategory
         if (field === 'category') {
-          updatedProduct.metaCategory = '';
+          updatedProduct.metaCategory = getMetaCategory(value);
         }
         
         return updatedProduct;
@@ -787,110 +575,123 @@ export default function PurchaseOrderImport() {
       return product;
     }));
 
-    // Clear error if it was set
-    setError("");
-    
-    // Show success message
-    const affectedCount = products.filter(product => {
-      const productStyleKey = `${product.style}-${product.color}`;
-      return selectedProductStyles.has(productStyleKey);
-    }).length;
-    
-    setServerMessages(prev => [
-      ...prev,
-      { 
-        message: `Cleared ${field} from ${affectedCount} products across ${selectedProductStyles.size} style(s)`, 
-        isError: false 
-      }
-    ]);
+    setServerMessages(prev => [...prev, { 
+      message: `Applied ${field} to ${updatedCount} products across ${uniqueStyles.size} styles`, 
+      isError: false 
+    }]);
   };
 
-  // Apply season to selected products
   const applySeason = () => {
-    const seasonString = `${formData.season} ${formData.brandSeason} ${formData.yearSeason}`;
-    applyToSelected('season', seasonString);
-  };
+    const selectedProducts = products.filter(p => p.selected);
+    if (selectedProducts.length === 0) return;
 
-  // Clear season from selected products
-  const clearSeason = () => {
-    clearFromSelected('season');
-  };
-
-  // Apply standard sizing to selected products
-  const applyStandardSizing = () => {
-    const selectedProductStyles = new Set(
-      products
-        .filter(product => product.selected)
-        .map(product => `${product.style}-${product.color}`)
+    const seasonString = `${formData.season} ${formData.brandSeason} ${formData.yearSeason}`.trim();
+    
+    // Get unique style+color combinations from selected products
+    const uniqueStyles = new Set(
+      selectedProducts.map(p => `${p.style}-${p.color}`)
     );
 
-    if (selectedProductStyles.size === 0) {
-      setError("Please select at least one product first");
-      return;
-    }
+    let updatedCount = 0;
+    setProducts(products.map((product) => {
+      const styleColorKey = `${product.style}-${product.color}`;
+      if (uniqueStyles.has(styleColorKey)) {
+        updatedCount++;
+        return { ...product, season: seasonString };
+      }
+      return product;
+    }));
 
-    const sizeMapping = sizeMappings[formData.sizing];
-    const sizeMappingFilter = sizeMappingFilters[formData.sizing];
+    setServerMessages(prev => [...prev, { 
+      message: `Applied season "${seasonString}" to ${updatedCount} products across ${uniqueStyles.size} styles`, 
+      isError: false 
+    }]);
+  };
 
-    setProducts(products.map(product => {
-      const productStyleKey = `${product.style}-${product.color}`;
-      if (selectedProductStyles.has(productStyleKey)) {
-        let updatedProduct = { ...product };
-        const originalSize = product.size;
-        const category = product.category.toLowerCase();
+  const removeSeason = () => {
+    const selectedProducts = products.filter(p => p.selected);
+    if (selectedProducts.length === 0) return;
 
-        // Update size display if mapping exists
-        if (sizeMapping && sizeMapping[originalSize]) {
-          updatedProduct.size = sizeMapping[originalSize];
-        }
+    // Get unique style+color combinations from selected products
+    const uniqueStyles = new Set(
+      selectedProducts.map(p => `${p.style}-${p.color}`)
+    );
 
-        // Update sizing fields based on category
-        if (category.includes('jeans') || category.includes('denim')) {
-          if (category.includes('shorts')) {
-            // For denim shorts, use clothing size mapping
-            if (sizeMappingFilter && sizeMappingFilter[originalSize]) {
-              updatedProduct.clothingSize = sizeMappingFilter[originalSize];
+    let updatedCount = 0;
+    setProducts(products.map((product) => {
+      const styleColorKey = `${product.style}-${product.color}`;
+      if (uniqueStyles.has(styleColorKey)) {
+        updatedCount++;
+        return { ...product, season: "" };
+      }
+      return product;
+    }));
+
+    setServerMessages(prev => [...prev, { 
+      message: `Removed season from ${updatedCount} products across ${uniqueStyles.size} styles`, 
+      isError: false 
+    }]);
+  };
+
+  const applyStandardSizing = () => {
+    const selectedProducts = products.filter(p => p.selected);
+    if (selectedProducts.length === 0) return;
+
+    const sizeMapping = getSizeMapping(formData.sizing);
+    const sizeMappingFilter = getSizeMappingFilter(formData.sizing);
+
+    // Get unique style+color combinations from selected products
+    const uniqueStyles = new Set(
+      selectedProducts.map(p => `${p.style}-${p.color}`)
+    );
+
+    let updatedCount = 0;
+    setProducts(products.map((product) => {
+      const styleColorKey = `${product.style}-${product.color}`;
+      if (uniqueStyles.has(styleColorKey)) {
+        const productType = getProductType(product.category);
+        const updatedProduct = { ...product };
+        
+        if (productType === 'shoes') {
+          // Update shoe size filter
+          updatedProduct.shoeSize = convertShoeSize(product.size);
+        } else if (productType === 'jeans') {
+          if (isDenimShorts(product.category)) {
+            // For denim shorts, apply size mapping like clothing
+            if (sizeMapping[product.size]) {
+              updatedProduct.size = sizeMapping[product.size];
+            }
+            if (sizeMappingFilter[product.size]) {
+              updatedProduct.clothingSize = sizeMappingFilter[product.size];
             } else {
-              updatedProduct.clothingSize = originalSize;
+              updatedProduct.clothingSize = product.size;
             }
           } else {
-            // For jeans, use original size
-            updatedProduct.jeansSize = originalSize;
+            // For regular jeans, keep original size in jeans size
+            updatedProduct.jeansSize = product.size;
           }
-        } else if (category.includes('shoes')) {
-          // For shoes, use shoe size filter
-          if (shoeSizeFilter[originalSize]) {
-            updatedProduct.shoeSize = shoeSizeFilter[originalSize];
-          } else {
-            updatedProduct.shoeSize = originalSize;
+        } else if (productType === 'clothing') {
+          // Update size display and clothing size filter
+          if (sizeMapping[product.size]) {
+            updatedProduct.size = sizeMapping[product.size];
           }
-        } else if (category.includes('clothing')) {
-          // For clothing, use clothing size mapping
-          if (sizeMappingFilter && sizeMappingFilter[originalSize]) {
-            updatedProduct.clothingSize = sizeMappingFilter[originalSize];
+          if (sizeMappingFilter[product.size]) {
+            updatedProduct.clothingSize = sizeMappingFilter[product.size];
           } else {
-            updatedProduct.clothingSize = originalSize;
+            updatedProduct.clothingSize = product.size;
           }
         }
-
+        
+        updatedCount++;
         return updatedProduct;
       }
       return product;
     }));
 
-    // Show success message
-    const affectedCount = products.filter(product => {
-      const productStyleKey = `${product.style}-${product.color}`;
-      return selectedProductStyles.has(productStyleKey);
-    }).length;
-    
-    setServerMessages(prev => [
-      ...prev,
-      { 
-        message: `Applied ${formData.sizing} sizing to ${affectedCount} products across ${selectedProductStyles.size} style(s)`, 
-        isError: false 
-      }
-    ]);
+    setServerMessages(prev => [...prev, { 
+      message: `Applied ${formData.sizing} sizing to ${updatedCount} products across ${uniqueStyles.size} styles`, 
+      isError: false 
+    }]);
   };
 
   const addPayment = () => {
@@ -947,9 +748,6 @@ export default function PurchaseOrderImport() {
       setIsLoading(false);
     }
   };
-
-  // Generate year options from 26 to 40
-  const yearOptions = Array.from({ length: 15 }, (_, i) => (26 + i).toString());
 
   return (
     <Layout title="New Draft Order" showHeader={true} showFooter={false}>
@@ -1098,56 +896,55 @@ export default function PurchaseOrderImport() {
         {/* Control Panel */}
         <Card>
           <h3 className="text-lg font-semibold text-slate-900 mb-4">Product Controls</h3>
-          <p className="text-sm text-slate-600 mb-4">
-            Select products by checking the boxes, then apply changes to all sizes of the same style.
-          </p>
           
-          {/* Season Controls */}
+          {/* Season Builder */}
           <div className="mb-6 p-4 bg-slate-50 rounded-lg">
             <h4 className="text-md font-semibold text-slate-900 mb-3">Season</h4>
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={formData.season}
-                onChange={(e) => setFormData({ ...formData, season: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 max-w-32"
-              >
-                <option value="Resort">Resort</option>
-                <option value="Spring">Spring</option>
-                <option value="Summer">Summer</option>
-                <option value="Fall">Fall</option>
-                <option value="Personal">Personal</option>
-                <option value="Consignment">Consignment</option>
-              </select>
-              
-              <select
-                value={formData.brandSeason}
-                onChange={(e) => setFormData({ ...formData, brandSeason: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 max-w-64"
-              >
-                <option value="">Select a Vendor Name</option>
-                {vendors.map((vendor) => (
-                  <option key={vendor} value={vendor}>
-                    {vendor}
-                  </option>
-                ))}
-              </select>
-              
-              <select
-                value={formData.yearSeason}
-                onChange={(e) => setFormData({ ...formData, yearSeason: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 max-w-20"
-              >
-                {yearOptions.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-              
+            <div className="flex flex-wrap gap-2 items-end">
+              <div className="flex-1 min-w-32">
+                <select
+                  value={formData.season}
+                  onChange={(e) => setFormData({ ...formData, season: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                >
+                  {seasonOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex-1 min-w-48">
+                <select
+                  value={formData.brandSeason}
+                  onChange={(e) => setFormData({ ...formData, brandSeason: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="">Select a Vendor Name</option>
+                  {vendors.map((vendor) => (
+                    <option key={vendor} value={vendor}>
+                      {vendor}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex-1 min-w-20">
+                <select
+                  value={formData.yearSeason}
+                  onChange={(e) => setFormData({ ...formData, yearSeason: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                >
+                  {yearOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <Button size="sm" onClick={applySeason}>
                 Apply
               </Button>
-              <Button size="sm" variant="danger" onClick={clearSeason}>
+              <Button size="sm" variant="danger" onClick={removeSeason}>
                 Delete
               </Button>
             </div>
@@ -1175,7 +972,7 @@ export default function PurchaseOrderImport() {
                 >
                   Apply
                 </Button>
-                <Button size="sm" variant="danger" onClick={() => clearFromSelected("category")}>
+                <Button size="sm" variant="danger" onClick={() => applyToSelected("category", "")}>
                   Clear
                 </Button>
               </div>
@@ -1197,9 +994,6 @@ export default function PurchaseOrderImport() {
                 >
                   Apply
                 </Button>
-                <Button size="sm" variant="danger" onClick={() => clearFromSelected("preorder")}>
-                  Clear
-                </Button>
               </div>
             </FormField>
 
@@ -1210,21 +1004,13 @@ export default function PurchaseOrderImport() {
                   onChange={(e) => setFormData({ ...formData, sizing: e.target.value })}
                   className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                 >
-                  <option value="australia">Australia</option>
-                  <option value="france">France</option>
-                  <option value="uk">Great Britain</option>
-                  <option value="italy">Italy</option>
-                  <option value="us">United States</option>
-                  <option value="zimmermann">Zimmermann</option>
-                  <option value="jd">Juliet Dunn</option>
-                  <option value="lmf">Lisa Marie Fernandez</option>
+                  {sizingOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
-                <Button size="sm" onClick={applyStandardSizing}>
-                  Apply
-                </Button>
-                <Button size="sm" variant="danger" onClick={() => clearFromSelected("sizing")}>
-                  Clear
-                </Button>
+                <Button size="sm" onClick={applyStandardSizing}>Apply</Button>
               </div>
             </FormField>
           </div>
@@ -1276,9 +1062,6 @@ export default function PurchaseOrderImport() {
           <Card padding="none">
             <div className="p-6 border-b border-slate-200">
               <h3 className="text-lg font-semibold text-slate-900">Products ({products.length})</h3>
-              <p className="text-sm text-slate-600 mt-1">
-                Select products to apply bulk changes to all sizes of the same style
-              </p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -1306,7 +1089,7 @@ export default function PurchaseOrderImport() {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">SKU</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Barcode</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Season</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">P-Type</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Category</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Tags</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Preorder</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Margin</th>
