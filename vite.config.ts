@@ -15,9 +15,7 @@ export default defineConfig(({ mode }) => {
     server: {
       allowedHosts: ['hushloladre.com'],
       strictPort: true,
-      hmr: {
-        port: 5173,
-      },
+      hmr: false, // Disable HMR to prevent WebSocket conflicts
     },
     optimizeDeps: {
       exclude: ["lucide-react"],
@@ -33,10 +31,7 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       host: '0.0.0.0',
       allowedHosts: ['hushloladre.com'],
-      hmr: {
-        port: 5173,
-        host: 'hushloladre.com',
-      },
+      hmr: false, // Disable HMR to prevent conflicts with Socket.IO
     },
     optimizeDeps: {
       exclude: ["lucide-react"],

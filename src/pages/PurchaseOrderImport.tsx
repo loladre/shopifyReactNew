@@ -131,9 +131,9 @@ export default function PurchaseOrderImport() {
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
     const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
 
-    // Initialize Socket.IO connection with authentication
+    // Initialize Socket.IO connection to the correct server endpoint
     const socketInstance = io(apiBaseUrl, {
-      path: `${basePath}/socket.io/`,
+      path: "/socket.io/", // Use the correct Socket.IO path from your Apache config
       transports: ["websocket", "polling"],
       autoConnect: true,
       reconnection: true,
