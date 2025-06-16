@@ -25,8 +25,13 @@ import {
   sizeMappings,
   sizeMappingFilters,
   shoeSizeFilter,
+  getSizeMapping,
+  getSizeMappingFilter,
+  getMetaCategory,
+  convertShoeSize,
   getProductType,
   isDenimShorts,
+  sizingOptions,
   seasonOptions,
   yearOptions,
 } from "../utils/sizeConversions";
@@ -97,7 +102,7 @@ export default function PurchaseOrderImport() {
     sizing: "australia",
     season: "Fall",
     brandSeason: "",
-    yearSeason: "23",
+    yearSeason: "26",
     terms: "100% Before Delivery",
     deposit: "0",
     delivery: "100",
@@ -118,49 +123,6 @@ export default function PurchaseOrderImport() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Helper function to construct season string
-  const constructSeasonString = () => {
-    const { season, brandSeason, yearSeason } = formData;
-    if (brandSeason.trim()) {
-      return `${season} ${brandSeason} ${yearSeason}`;
-    }
-    return `${season}${yearSeason}`;
-  };
-
-  // Helper function to construct tags
-  const constructTags = (product: Product) => {
-    const tags = [];
-    
-    // Add season
-    tags.push(constructSeasonString());
-    
-    // Add preorder if applicable
-    if (product.preorder) {
-      tags.push("preorder");
-      
-      // Add shipping message if start ship date is available
-      if (formData.startShipDate) {
-        const shipDate = new Date(formData.startShipDate).toLocaleDateString();
-        tags.push(`Message2:282727:Ships by ${shipDate}`);
-      }
-    }
-    
-    return tags.join(",");
-  };
-
-  // Helper function to get unique styles for row coloring
-  const getUniqueStyles = () => {
-    const styles = [...new Set(products.map(product => product.style))];
-    return styles;
-  };
-
-  // Helper function to get row background color based on style
-  const getRowBackgroundColor = (style: string) => {
-    const uniqueStyles = getUniqueStyles();
-    const styleIndex = uniqueStyles.indexOf(style);
-    return styleIndex % 2 === 0 ? "bg-white" : "bg-slate-50";
-  };
-
   // Authentication check and WebSocket initialization
   useEffect(() => {
     const token = localStorage.getItem("bridesbyldToken");
@@ -179,28 +141,6 @@ export default function PurchaseOrderImport() {
       }
     };
   }, []);
-
-  // Update season column when season constructor changes
-  useEffect(() => {
-    const seasonString = constructSeasonString();
-    setProducts(prevProducts =>
-      prevProducts.map(product => ({
-        ...product,
-        season: seasonString,
-        tags: constructTags({ ...product, season: seasonString })
-      }))
-    );
-  }, [formData.season, formData.brandSeason, formData.yearSeason]);
-
-  // Update tags when start ship date changes
-  useEffect(() => {
-    setProducts(prevProducts =>
-      prevProducts.map(product => ({
-        ...product,
-        tags: constructTags(product)
-      }))
-    );
-  }, [formData.startShipDate]);
 
   const initializeWebSocket = (token: string) => {
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
@@ -285,6 +225,16 @@ export default function PurchaseOrderImport() {
     calculateTotals();
   }, [products, payments, credits]);
 
+  // Update season and tags when season constructor changes
+  useEffect(() => {
+    updateAllProductSeasons();
+  }, [formData.season, formData.brandSeason, formData.yearSeason, formData.startShipDate]);
+
+  // Update tags when preorder status changes
+  useEffect(() => {
+    updateAllProductTags();
+  }, [formData.season, formData.brandSeason, formData.yearSeason, formData.startShipDate]);
+
   const loadVendors = async () => {
     try {
       const token = localStorage.getItem("bridesbyldToken");
@@ -321,6 +271,44 @@ export default function PurchaseOrderImport() {
     } catch (error) {
       setError("Failed to load categories");
     }
+  };
+
+  const constructSeason = () => {
+    const { season, brandSeason, yearSeason } = formData;
+    if (brandSeason) {
+      return `${season} ${brandSeason} ${yearSeason}`;
+    }
+    return `${season}${yearSeason}`;
+  };
+
+  const constructTags = (product: Product) => {
+    const season = constructSeason();
+    let tags = [season];
+    
+    if (product.preorder) {
+      tags.push("preorder");
+      if (formData.startShipDate) {
+        tags.push(`Message2:282727:Ships by ${formData.startShipDate}`);
+      }
+    }
+    
+    return tags.join(",");
+  };
+
+  const updateAllProductSeasons = () => {
+    const season = constructSeason();
+    setProducts(products.map(product => ({
+      ...product,
+      season,
+      tags: constructTags(product)
+    })));
+  };
+
+  const updateAllProductTags = () => {
+    setProducts(products.map(product => ({
+      ...product,
+      tags: constructTags(product)
+    })));
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -458,6 +446,7 @@ export default function PurchaseOrderImport() {
 
           // Create individual products for each unit in the quantity
           for (let k = 0; k < quantityNum; k++) {
+            const season = constructSeason();
             const product: Product = {
               id: `${i}-${j}-${k}`,
               selected: false,
@@ -470,7 +459,7 @@ export default function PurchaseOrderImport() {
               retail,
               sku: skus[skuIndex++] || "",
               barcode: barcodes[barcodeIndex++] || "",
-              season: constructSeasonString(),
+              season,
               category: "",
               tags: "",
               preorder: false,
@@ -481,7 +470,7 @@ export default function PurchaseOrderImport() {
               jeansSize: "",
               metaCategory: "",
             };
-
+            
             // Set initial tags
             product.tags = constructTags(product);
             newProducts.push(product);
@@ -617,12 +606,12 @@ export default function PurchaseOrderImport() {
         if (product.selected) {
           const updatedProduct = { ...product, [field]: value };
           
-          // Update meta category if category is being changed
+          // Update metaCategory when category changes
           if (field === 'category') {
-            updatedProduct.metaCategory = selectMapping[value] || "";
+            updatedProduct.metaCategory = getMetaCategory(value);
           }
           
-          // Update tags when preorder status changes
+          // Update tags when preorder changes
           if (field === 'preorder') {
             updatedProduct.tags = constructTags(updatedProduct);
           }
@@ -634,75 +623,48 @@ export default function PurchaseOrderImport() {
     );
   };
 
-  const applyToSameStyle = (field: string, value: any) => {
-    const selectedProducts = products.filter(p => p.selected);
-    if (selectedProducts.length === 0) return;
+  // Apply standard sizing to ALL products (not just selected)
+  const applyStandardSizing = () => {
+    const sizeMapping = getSizeMapping(formData.sizing);
+    const sizeMappingFilter = getSizeMappingFilter(formData.sizing);
 
-    // Get all unique style names from selected products
-    const selectedStyles = [...new Set(selectedProducts.map(p => p.name))];
-
-    setProducts(
-      products.map((product) => {
-        if (selectedStyles.includes(product.name)) {
-          const updatedProduct = { ...product, [field]: value };
-          
-          // Update meta category if category is being changed
-          if (field === 'category') {
-            updatedProduct.metaCategory = selectMapping[value] || "";
+    setProducts(products.map(product => {
+      const updatedProduct = { ...product };
+      const productType = getProductType(product.category);
+      
+      if (productType === 'shoes') {
+        // For shoes, update shoeSize
+        updatedProduct.shoeSize = convertShoeSize(product.size);
+      } else if (productType === 'jeans') {
+        if (isDenimShorts(product.category)) {
+          // For denim shorts, apply size mapping and update both size display and jeansSize
+          if (sizeMapping[product.size]) {
+            updatedProduct.size = sizeMapping[product.size];
           }
-          
-          // Update tags when preorder status changes
-          if (field === 'preorder') {
-            updatedProduct.tags = constructTags(updatedProduct);
-          }
-          
-          return updatedProduct;
+          updatedProduct.jeansSize = sizeMappingFilter[product.size] || product.size;
+        } else {
+          // For regular jeans, just update jeansSize
+          updatedProduct.jeansSize = product.size;
         }
-        return product;
-      })
-    );
+      } else if (productType === 'clothing') {
+        // For clothing, apply size mapping and update clothingSize
+        if (sizeMapping[product.size]) {
+          updatedProduct.size = sizeMapping[product.size];
+        }
+        updatedProduct.clothingSize = sizeMappingFilter[product.size] || product.size;
+      }
+      
+      return updatedProduct;
+    }));
   };
 
-  const applySizingToSelected = () => {
-    const selectedProducts = products.filter(p => p.selected);
-    if (selectedProducts.length === 0) return;
-
-    const sizeMapping = sizeMappings[formData.sizing] || {};
-    const sizeMappingFilter = sizeMappingFilters[formData.sizing] || {};
-
-    setProducts(
-      products.map((product) => {
-        if (!product.selected) return product;
-
-        const updatedProduct = { ...product };
-        const productType = getProductType(product.category);
-        const originalSize = product.size;
-
-        // Update size display based on product type and sizing country
-        if (productType === 'shoes') {
-          updatedProduct.shoeSize = shoeSizeFilter[originalSize] || originalSize;
-        } else if (productType === 'jeans') {
-          if (isDenimShorts(product.category)) {
-            // For denim shorts, apply size mapping like clothing
-            if (sizeMapping[originalSize]) {
-              updatedProduct.size = sizeMapping[originalSize];
-            }
-            updatedProduct.jeansSize = sizeMappingFilter[originalSize] || originalSize;
-          } else {
-            // For regular jeans, keep original size
-            updatedProduct.jeansSize = originalSize;
-          }
-        } else if (productType === 'clothing') {
-          // Apply size mapping for clothing
-          if (sizeMapping[originalSize]) {
-            updatedProduct.size = sizeMapping[originalSize];
-          }
-          updatedProduct.clothingSize = sizeMappingFilter[originalSize] || originalSize;
-        }
-
-        return updatedProduct;
-      })
-    );
+  const applySeason = () => {
+    const season = constructSeason();
+    setProducts(products.map(product => ({
+      ...product,
+      season,
+      tags: constructTags(product)
+    })));
   };
 
   const addPayment = () => {
@@ -758,6 +720,23 @@ export default function PurchaseOrderImport() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Group products by style for alternating row colors
+  const getRowClassName = (product: Product, index: number) => {
+    const styleGroups: { [key: string]: number } = {};
+    let groupIndex = 0;
+    
+    products.forEach((p, i) => {
+      if (i <= index) {
+        if (!styleGroups[p.style]) {
+          styleGroups[p.style] = groupIndex++;
+        }
+      }
+    });
+    
+    const currentGroupIndex = styleGroups[product.style];
+    return currentGroupIndex % 2 === 0 ? "bg-white" : "bg-slate-50";
   };
 
   return (
@@ -904,7 +883,119 @@ export default function PurchaseOrderImport() {
           </div>
         </Card>
 
-        {/* Control Panel */}
+        {/* Season Constructor & Order Details */}
+        <Card>
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Season & Order Details</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Season Constructor - Left Half */}
+            <div className="space-y-4">
+              <h4 className="text-md font-medium text-slate-800">Season Constructor</h4>
+              <div className="flex gap-2 items-end">
+                <FormField label="Season">
+                  <select
+                    value={formData.season}
+                    onChange={(e) => setFormData({ ...formData, season: e.target.value })}
+                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 w-28"
+                  >
+                    {seasonOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+
+                <FormField label="Brand">
+                  <select
+                    value={formData.brandSeason}
+                    onChange={(e) => setFormData({ ...formData, brandSeason: e.target.value })}
+                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 flex-1 min-w-0"
+                  >
+                    <option value="">Select Brand...</option>
+                    {vendors.map((vendor) => (
+                      <option key={vendor} value={vendor}>
+                        {vendor}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+
+                <FormField label="Year">
+                  <select
+                    value={formData.yearSeason}
+                    onChange={(e) => setFormData({ ...formData, yearSeason: e.target.value })}
+                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 w-20"
+                  >
+                    {yearOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+
+                <Button size="sm" onClick={applySeason}>
+                  Apply
+                </Button>
+
+                <Button size="sm" variant="danger" onClick={() => {
+                  setFormData({ ...formData, season: "Fall", brandSeason: "", yearSeason: "26" });
+                }}>
+                  Delete
+                </Button>
+              </div>
+
+              {/* Season Preview */}
+              <div className="mt-3 p-3 bg-slate-50 rounded-lg">
+                <span className="text-sm text-slate-600">Preview: </span>
+                <span className="font-medium text-slate-900">{constructSeason()}</span>
+              </div>
+            </div>
+
+            {/* Order Details - Right Half */}
+            <div className="space-y-4">
+              <h4 className="text-md font-medium text-slate-800">Order Information</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField label="Brand PO">
+                  <Input
+                    value={formData.brandPO}
+                    onChange={(e) => setFormData({ ...formData, brandPO: e.target.value })}
+                    placeholder="Brand PO number"
+                  />
+                </FormField>
+
+                <FormField label="Created Date">
+                  <Input
+                    type="date"
+                    value={formData.createdDate}
+                    onChange={(e) => setFormData({ ...formData, createdDate: e.target.value })}
+                    icon={<Calendar className="w-4 h-4 text-slate-400" />}
+                  />
+                </FormField>
+
+                <FormField label="Start Ship Date">
+                  <Input
+                    type="date"
+                    value={formData.startShipDate}
+                    onChange={(e) => setFormData({ ...formData, startShipDate: e.target.value })}
+                    icon={<Calendar className="w-4 h-4 text-slate-400" />}
+                  />
+                </FormField>
+
+                <FormField label="Complete Date">
+                  <Input
+                    type="date"
+                    value={formData.completeDate}
+                    onChange={(e) => setFormData({ ...formData, completeDate: e.target.value })}
+                    icon={<Calendar className="w-4 h-4 text-slate-400" />}
+                  />
+                </FormField>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Product Controls */}
         <Card>
           <h3 className="text-lg font-semibold text-slate-900 mb-4">Product Controls</h3>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -924,12 +1015,12 @@ export default function PurchaseOrderImport() {
                 </select>
                 <Button
                   size="sm"
-                  onClick={() => applyToSameStyle("category", formData.category)}
+                  onClick={() => applyToSelected("category", formData.category)}
                   disabled={!formData.category}
                 >
                   Apply
                 </Button>
-                <Button size="sm" variant="danger" onClick={() => applyToSameStyle("category", "")}>
+                <Button size="sm" variant="danger" onClick={() => applyToSelected("category", "")}>
                   Clear
                 </Button>
               </div>
@@ -947,7 +1038,7 @@ export default function PurchaseOrderImport() {
                 </select>
                 <Button
                   size="sm"
-                  onClick={() => applyToSameStyle("preorder", formData.preorder === "true")}
+                  onClick={() => applyToSelected("preorder", formData.preorder === "true")}
                 >
                   Apply
                 </Button>
@@ -961,120 +1052,17 @@ export default function PurchaseOrderImport() {
                   onChange={(e) => setFormData({ ...formData, sizing: e.target.value })}
                   className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                 >
-                  <option value="australia">Australia</option>
-                  <option value="france">France</option>
-                  <option value="uk">Great Britain</option>
-                  <option value="italy">Italy</option>
-                  <option value="us">United States</option>
-                  <option value="zimmermann">Zimmermann</option>
-                  <option value="jd">Juliet Dunn</option>
-                  <option value="lmf">Lisa Marie Fernandez</option>
+                  {sizingOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
-                <Button size="sm" onClick={applySizingToSelected}>Apply</Button>
+                <Button size="sm" onClick={applyStandardSizing}>
+                  Apply
+                </Button>
               </div>
             </FormField>
-          </div>
-        </Card>
-
-        {/* Season Constructor and Order Details */}
-        <Card>
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">Season & Order Details</h3>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Season Constructor - Left Half */}
-            <div>
-              <h4 className="text-md font-medium text-slate-700 mb-3">Season Constructor</h4>
-              <div className="space-y-3">
-                <div className="flex gap-2">
-                  <select
-                    value={formData.season}
-                    onChange={(e) => setFormData({ ...formData, season: e.target.value })}
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 min-w-[120px]"
-                  >
-                    {seasonOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  
-                  <select
-                    value={formData.brandSeason}
-                    onChange={(e) => setFormData({ ...formData, brandSeason: e.target.value })}
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="">Select Vendor Name</option>
-                    {vendors.map((vendor) => (
-                      <option key={vendor} value={vendor}>
-                        {vendor}
-                      </option>
-                    ))}
-                  </select>
-                  
-                  <select
-                    value={formData.yearSeason}
-                    onChange={(e) => setFormData({ ...formData, yearSeason: e.target.value })}
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 min-w-[70px]"
-                  >
-                    {yearOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="text-sm text-slate-600 bg-slate-50 p-2 rounded">
-                  <strong>Preview:</strong> {constructSeasonString()}
-                </div>
-              </div>
-            </div>
-
-            {/* Order Details - Right Half */}
-            <div>
-              <h4 className="text-md font-medium text-slate-700 mb-3">Order Information</h4>
-              <div className="grid grid-cols-1 gap-4">
-                {/* Row 1: Brand PO and Created Date */}
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField label="Brand PO">
-                    <Input
-                      value={formData.brandPO}
-                      onChange={(e) => setFormData({ ...formData, brandPO: e.target.value })}
-                      placeholder="Brand PO number"
-                    />
-                  </FormField>
-
-                  <FormField label="Created Date">
-                    <Input
-                      type="date"
-                      value={formData.createdDate}
-                      onChange={(e) => setFormData({ ...formData, createdDate: e.target.value })}
-                      icon={<Calendar className="w-4 h-4 text-slate-400" />}
-                    />
-                  </FormField>
-                </div>
-
-                {/* Row 2: Start Ship Date and Complete Date */}
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField label="Start Ship Date">
-                    <Input
-                      type="date"
-                      value={formData.startShipDate}
-                      onChange={(e) => setFormData({ ...formData, startShipDate: e.target.value })}
-                      icon={<Calendar className="w-4 h-4 text-slate-400" />}
-                    />
-                  </FormField>
-
-                  <FormField label="Complete Date">
-                    <Input
-                      type="date"
-                      value={formData.completeDate}
-                      onChange={(e) => setFormData({ ...formData, completeDate: e.target.value })}
-                      icon={<Calendar className="w-4 h-4 text-slate-400" />}
-                    />
-                  </FormField>
-                </div>
-              </div>
-            </div>
           </div>
         </Card>
 
@@ -1110,7 +1098,7 @@ export default function PurchaseOrderImport() {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">SKU</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Barcode</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Season</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Category</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">P-Type</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Tags</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Preorder</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Margin</th>
@@ -1122,8 +1110,8 @@ export default function PurchaseOrderImport() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {products.map((product) => (
-                    <tr key={product.id} className={getRowBackgroundColor(product.style)}>
+                  {products.map((product, index) => (
+                    <tr key={product.id} className={getRowClassName(product, index)}>
                       <td className="px-4 py-3">
                         <button
                           onClick={() => handleProductSelect(product.id)}
