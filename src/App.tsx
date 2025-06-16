@@ -238,16 +238,22 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  // Get the base path from environment
-  const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-  const routerBasename = basePath ? `${basePath}/shopifyreact` : '/shopifyreact';
-
   return (
-    <Router basename={routerBasename}>
+    <Router>
       <Routes>
         <Route path="/" element={<LoginPage />} />
+        <Route path="/shopifyreact" element={<Navigate to="/" replace />} />
+        <Route path="/shopifyreact/" element={<Navigate to="/" replace />} />
         <Route 
           path="/purchase-order" 
+          element={
+            <ProtectedRoute>
+              <PurchaseOrderImport />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/shopifyreact/purchase-order" 
           element={
             <ProtectedRoute>
               <PurchaseOrderImport />

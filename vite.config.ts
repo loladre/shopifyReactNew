@@ -13,8 +13,9 @@ export default defineConfig(({ mode }) => {
   const boltConfig = {
     plugins: [react()],
     server: {
-      allowedHosts: ['hushloladre.com'],
-      strictPort: true,
+      port: 5173,
+      host: '0.0.0.0',
+      strictPort: false,
       hmr: false, // Disable HMR to prevent WebSocket conflicts
     },
     optimizeDeps: {
@@ -28,9 +29,8 @@ export default defineConfig(({ mode }) => {
     base: "/shopifyreact/",
     server: {
       port: 5173,
-      strictPort: true,
+      strictPort: false,
       host: '0.0.0.0',
-      allowedHosts: ['hushloladre.com'],
       hmr: false, // Disable HMR to prevent conflicts with Socket.IO
     },
     optimizeDeps: {
