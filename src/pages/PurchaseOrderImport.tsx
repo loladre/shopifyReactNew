@@ -27,9 +27,9 @@ import {
   convertShoeSize, 
   getProductType, 
   isDenimShorts,
+  sizingOptions,
   seasonOptions,
-  yearOptions,
-  sizingOptions
+  yearOptions
 } from "../utils/sizeConversions";
 
 interface Product {
@@ -75,7 +75,6 @@ interface Credit {
 export default function PurchaseOrderImport() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [credits, setCredits] = useState<Credit[]>([]);
@@ -88,6 +87,7 @@ export default function PurchaseOrderImport() {
   const [serverMessages, setServerMessages] = useState<
     Array<{ message: string; isError: boolean }>
   >([]);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -99,7 +99,7 @@ export default function PurchaseOrderImport() {
     sizing: "australia",
     season: "Fall",
     brandSeason: "",
-    yearSeason: "23",
+    yearSeason: "26",
     terms: "100% Before Delivery",
     deposit: "0",
     delivery: "100",
@@ -222,10 +222,10 @@ export default function PurchaseOrderImport() {
     calculateTotals();
   }, [products, payments, credits]);
 
-  // Update season for all products when season constructor changes
+  // Update tags when season constructor or products change
   useEffect(() => {
-    updateAllProductSeasons();
-  }, [formData.season, formData.brandSeason, formData.yearSeason]);
+    updateAllTags();
+  }, [formData.season, formData.brandSeason, formData.yearSeason, formData.startShipDate]);
 
   const loadVendors = async () => {
     try {
@@ -263,37 +263,6 @@ export default function PurchaseOrderImport() {
     } catch (error) {
       setError("Failed to load categories");
     }
-  };
-
-  const generateSeasonString = () => {
-    const { season, brandSeason, yearSeason } = formData;
-    if (brandSeason.trim()) {
-      return `${season} ${brandSeason} ${yearSeason}`;
-    } else {
-      return `${season}${yearSeason}`;
-    }
-  };
-
-  const updateAllProductSeasons = () => {
-    const seasonString = generateSeasonString();
-    setProducts(prevProducts =>
-      prevProducts.map(product => ({
-        ...product,
-        season: seasonString,
-        tags: updateProductTags(product, seasonString)
-      }))
-    );
-  };
-
-  const updateProductTags = (product: Product, seasonString: string) => {
-    let tags = seasonString;
-    
-    if (product.preorder) {
-      const shipDate = formData.startShipDate || "TBD";
-      tags += `, Preorder, Ships ${shipDate}`;
-    }
-    
-    return tags;
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -428,14 +397,15 @@ export default function PurchaseOrderImport() {
           const retail = parseFloat(data[i][retailPos]?.toString() || "0") || 0;
           const margin = retail > 0 ? ((retail - cost) / retail) * 100 : 0;
           const quantityNum = parseInt(quantity.toString()) || 0;
-          const seasonString = generateSeasonString();
 
           // Create individual products for each unit in the quantity
           for (let k = 0; k < quantityNum; k++) {
-            const product: Product = {
+            const productName = `${data[i][styleNamePos]} ${data[i][styleNumberPos]} ${data[i][colorPos]}`;
+            
+            newProducts.push({
               id: `${i}-${j}-${k}`,
               selected: false,
-              name: `${data[i][styleNamePos]} ${data[i][styleNumberPos]} ${data[i][colorPos]}`,
+              name: productName,
               style: data[i][styleNumberPos]?.toString() || "",
               color: data[i][colorPos]?.toString() || "",
               size: headers[j]?.toString() || "",
@@ -444,9 +414,9 @@ export default function PurchaseOrderImport() {
               retail,
               sku: skus[skuIndex++] || "",
               barcode: barcodes[barcodeIndex++] || "",
-              season: seasonString,
+              season: "",
               category: "",
-              tags: seasonString,
+              tags: "",
               preorder: false,
               margin,
               total: cost, // Cost for 1 unit
@@ -454,9 +424,7 @@ export default function PurchaseOrderImport() {
               clothingSize: "",
               jeansSize: "",
               metaCategory: "",
-            };
-
-            newProducts.push(product);
+            });
           }
         }
       }
@@ -569,6 +537,45 @@ export default function PurchaseOrderImport() {
     setTotals({ subTotal, paymentTotal, creditTotal, grandTotal });
   };
 
+  const generateSeasonString = () => {
+    const { season, brandSeason, yearSeason } = formData;
+    if (brandSeason.trim()) {
+      return `${season} ${brandSeason} ${yearSeason}`;
+    } else {
+      return `${season}${yearSeason}`;
+    }
+  };
+
+  const generateTags = (product: Product) => {
+    const tags = [];
+    
+    // Add season
+    tags.push(generateSeasonString());
+    
+    // Add preorder if applicable
+    if (product.preorder) {
+      tags.push("preorder");
+      
+      // Add shipping message if start ship date is available
+      if (formData.startShipDate) {
+        const shipDate = new Date(formData.startShipDate).toLocaleDateString();
+        tags.push(`Message2:282727:Ships by ${shipDate}`);
+      }
+    }
+    
+    return tags.join(", ");
+  };
+
+  const updateAllTags = () => {
+    setProducts(prevProducts => 
+      prevProducts.map(product => ({
+        ...product,
+        tags: generateTags(product),
+        season: generateSeasonString()
+      }))
+    );
+  };
+
   const handleSelectAll = () => {
     const newSelectAll = !selectAll;
     setSelectAll(newSelectAll);
@@ -583,23 +590,23 @@ export default function PurchaseOrderImport() {
     );
   };
 
+  // Updated apply functions to work with same product names
   const applyToSelected = (field: string, value: any) => {
     const selectedProducts = products.filter(p => p.selected);
+    if (selectedProducts.length === 0) return;
+
+    // Get unique product names from selected products
     const selectedProductNames = [...new Set(selectedProducts.map(p => p.name))];
-    
+
     setProducts(prevProducts =>
       prevProducts.map(product => {
+        // Apply to all products with the same name as any selected product
         if (selectedProductNames.includes(product.name)) {
-          let updatedProduct = { ...product, [field]: value };
+          const updatedProduct = { ...product, [field]: value };
           
-          // Update meta category when category changes
-          if (field === 'category') {
-            updatedProduct.metaCategory = getMetaCategory(value);
-          }
-          
-          // Update tags when preorder changes
+          // Update tags if preorder changed
           if (field === 'preorder') {
-            updatedProduct.tags = updateProductTags(updatedProduct, updatedProduct.season);
+            updatedProduct.tags = generateTags(updatedProduct);
           }
           
           return updatedProduct;
@@ -609,37 +616,45 @@ export default function PurchaseOrderImport() {
     );
   };
 
+  // Apply standard sizing to entire order (only products with categories)
   const applyStandardSizing = () => {
-    const sizeMapping = getSizeMapping(formData.sizing);
-    const sizeMappingFilter = getSizeMappingFilter(formData.sizing);
-    
+    const sizingCountry = formData.sizing;
+    const sizeMapping = getSizeMapping(sizingCountry);
+    const sizeMappingFilter = getSizeMappingFilter(sizingCountry);
+
     setProducts(prevProducts =>
       prevProducts.map(product => {
-        // Only apply if product has a category (restriction as requested)
+        // Only apply if product has a category
         if (!product.category) return product;
-        
+
         const productType = getProductType(product.category);
-        let updatedProduct = { ...product };
+        const metaCategory = getMetaCategory(product.category);
         
+        let updatedProduct = { ...product, metaCategory };
+
+        // Apply size mappings based on product type
         if (productType === 'shoes') {
           updatedProduct.shoeSize = convertShoeSize(product.size);
           updatedProduct.clothingSize = "";
           updatedProduct.jeansSize = "";
         } else if (productType === 'jeans') {
           if (isDenimShorts(product.category)) {
+            // Denim shorts use clothing size
             updatedProduct.clothingSize = sizeMappingFilter[product.size] || product.size;
             updatedProduct.jeansSize = "";
           } else {
+            // Regular jeans use jeans size
             updatedProduct.jeansSize = sizeMapping[product.size] || product.size;
             updatedProduct.clothingSize = "";
           }
           updatedProduct.shoeSize = "";
-        } else if (productType === 'clothing') {
+        } else {
+          // Clothing items
           updatedProduct.clothingSize = sizeMappingFilter[product.size] || product.size;
           updatedProduct.shoeSize = "";
           updatedProduct.jeansSize = "";
         }
-        
+
         return updatedProduct;
       })
     );
@@ -687,199 +702,135 @@ export default function PurchaseOrderImport() {
     );
   };
 
-  const validateSchema = (schema: any): boolean => {
-    const errors: string[] = [];
-
-    // Basic validation
-    if (!schema.brand || schema.brand === "undefined") {
-      errors.push("Brand is empty or null");
-    }
-
-    if (!schema.purchaseOrderID) {
-      errors.push("Purchase Order ID is empty or null");
-    }
-
-    if (!schema.purchaseOrderTotalItemsCost) {
-      errors.push("Purchase Order Total Items Cost is empty or null");
-    }
-
-    if (!schema.purchaseOrderBalanceDue) {
-      errors.push("Purchase Order Balance Due is empty or null");
-    }
-
-    // Validate each product
-    for (let product of schema.products) {
-      if (!product.productName) {
-        errors.push("Product name is empty or null for a product");
+  // Group products by style for alternating row colors
+  const getGroupedProducts = () => {
+    const grouped: { [key: string]: Product[] } = {};
+    products.forEach(product => {
+      if (!grouped[product.name]) {
+        grouped[product.name] = [];
       }
-
-      if (!product.productSeasonMetafield) {
-        errors.push("Product season metafield is empty or null for a product");
-      }
-
-      if (!product.productType) {
-        errors.push("Product type is empty or null for a product");
-      }
-
-      if (!product.productTags) {
-        errors.push("Product tags is empty or null for a product");
-      }
-
-      // Validate each variant
-      for (let variant of product.productVariants) {
-        if (!variant.variantColor) {
-          errors.push("Variant color is empty or null for a product variant");
-        }
-
-        if (!variant.variantSize) {
-          errors.push("Variant size is empty or null for a product variant");
-        }
-
-        if (!variant.variantQuantity) {
-          errors.push("Variant quantity is empty or null for a product variant");
-        }
-
-        if (!variant.variantCost || variant.variantCost === "0") {
-          errors.push("Variant cost is empty or null for a product variant");
-        }
-
-        if (!variant.variantRetail || variant.variantRetail === "0") {
-          errors.push("Variant retail is empty or null for a product variant");
-        }
-
-        if (!variant.variantSku) {
-          errors.push("Variant SKU is empty or null for a product variant");
-        }
-
-        if (!variant.variantBarcode) {
-          errors.push("Variant barcode is empty or null for a product variant");
-        }
-
-        if (variant.variantPreOrder === undefined) {
-          errors.push("Variant pre order is undefined for a product variant");
-        }
-      }
-    }
-
-    setValidationErrors(errors);
-    return errors.length === 0;
+      grouped[product.name].push(product);
+    });
+    return grouped;
   };
 
-  const handleSave = async () => {
-    setIsLoading(true);
-    setValidationErrors([]);
+  const getRowColorClass = (productName: string, groupedProducts: { [key: string]: Product[] }) => {
+    const productNames = Object.keys(groupedProducts);
+    const groupIndex = productNames.indexOf(productName);
+    return groupIndex % 2 === 0 ? "bg-white" : "bg-slate-50";
+  };
+
+  // Submit functionality
+  const fillBasicDetails = (schema: any) => {
+    schema.purchaseOrderID = new Date().getTime();
+    schema.purchaseOrderNumber = formData.brandPO;
     
-    try {
-      // Build schema object
-      const schema = {
-        purchaseOrderID: new Date().getTime(),
-        purchaseOrderNumber: "",
-        brand: formData.vendorType === "existing" ? formData.selectedVendor : formData.newVendor,
-        draftOrder: true,
-        publishedOrder: false,
-        createdDate: formData.createdDate,
-        startShipDate: formData.startShipDate,
-        completedDate: formData.completeDate,
-        brandPoNumber: formData.brandPO,
-        purchaseOrderSeason: generateSeasonString(),
-        terms: formData.terms,
-        depositPercent: formData.deposit,
-        onDeliverPercent: formData.delivery,
-        net30Percent: formData.net30,
-        purchaseOrderTotalPayments: totals.paymentTotal.toString(),
-        purchaseOrderTotalCredits: totals.creditTotal.toString(),
-        purchaseOrderTotalItemsCost: totals.subTotal.toString(),
-        purchaseOrderBalanceDue: totals.grandTotal.toString(),
-        purchaseOrderNotes: formData.notes,
-        purchaseOrderCompleteReceive: false,
-        totalVariantReceivedQuantity: 0,
-        purchaseOrdertotalReceivedValue: 0,
-        purchaseOrderFiles: [],
-        totalProductQuantity: 0,
-        totalVariantQuantity: 0,
-        products: [],
-        purchaseOrderCredits: credits.map(credit => ({
-          creditDate: credit.date,
-          creditDescription: credit.description,
-          creditMethod: credit.method,
-          creditAmount: credit.amount,
-        })),
-        purchaseOrderPayments: payments.map(payment => ({
-          paymentDate: payment.date,
-          paymentDescription: payment.description,
-          paymentMethod: payment.method,
-          paymentAmount: payment.amount,
-        })),
+    // Brand selection
+    if (formData.vendorType === "existing") {
+      schema.brand = formData.selectedVendor;
+    } else {
+      schema.brand = formData.newVendor;
+    }
+    
+    schema.draftOrder = true;
+    schema.publishedOrder = false;
+    schema.createdDate = formData.createdDate;
+    schema.startShipDate = formData.startShipDate;
+    schema.completedDate = formData.completeDate;
+    schema.brandPoNumber = formData.brandPO;
+    schema.purchaseOrderSeason = generateSeasonString();
+    schema.terms = formData.terms;
+    schema.depositPercent = formData.deposit;
+    schema.onDeliverPercent = formData.delivery;
+    schema.net30Percent = formData.net30;
+    schema.purchaseOrderTotalPayments = totals.paymentTotal.toString();
+    schema.purchaseOrderTotalCredits = totals.creditTotal.toString();
+    schema.purchaseOrderTotalItemsCost = totals.subTotal.toString();
+    schema.purchaseOrderBalanceDue = totals.grandTotal.toString();
+    schema.purchaseOrderNotes = formData.notes;
+    schema.purchaseOrderCompleteReceive = false;
+    schema.totalVariantReceivedQuantity = 0;
+    schema.purchaseOrdertotalReceivedValue = 0;
+    schema.purchaseOrderFiles = [];
+  };
+
+  const fillProducts = (schema: any) => {
+    schema.products = [];
+    let totalProductQuantity = 0;
+    let totalVariantQuantity = 0;
+    const productDict: { [key: string]: any } = {};
+
+    products.forEach(product => {
+      const variant = {
+        variantColor: product.color,
+        variantSize: product.size,
+        variantQuantity: product.quantity,
+        variantCost: product.cost.toString(),
+        variantRetail: product.retail.toString(),
+        variantSku: product.sku,
+        variantBarcode: product.barcode,
+        variantPreOrder: product.preorder,
+        variantMetafieldShoeSize: product.shoeSize,
+        variantMetafieldClothingSize: product.clothingSize,
+        variantMetafieldJeansSize: product.jeansSize,
+        variantMetafieldCategory: product.metaCategory,
+        variantQuantityReceived: 0,
+        variantQuantityRejected: 0,
+        variantCanceled: false,
+        variantReceivedComplete: false,
+        variantQuantityReceivedDate: null,
+        shopifyPreOrderSold: 0,
       };
 
-      // Group products by name for schema
-      const productDict: { [key: string]: any } = {};
-      let totalProductQuantity = 0;
-      let totalVariantQuantity = 0;
+      totalVariantQuantity += variant.variantQuantity;
 
-      products.forEach(product => {
-        const productName = product.name;
-        const variant = {
-          variantColor: product.color,
-          variantSize: product.size,
-          variantQuantity: product.quantity,
-          variantCost: product.cost.toString(),
-          variantRetail: product.retail.toString(),
-          variantSku: product.sku,
-          variantBarcode: product.barcode,
-          variantPreOrder: product.preorder,
-          variantMetafieldShoeSize: product.shoeSize,
-          variantMetafieldClothingSize: product.clothingSize,
-          variantMetafieldJeansSize: product.jeansSize,
-          variantMetafieldCategory: product.metaCategory,
-          variantQuantityReceived: 0,
-          variantQuantityRejected: 0,
-          variantCanceled: false,
-          variantReceivedComplete: false,
-          variantQuantityReceivedDate: null,
-          shopifyPreOrderSold: 0,
+      if (productDict[product.name]) {
+        productDict[product.name].productVariants.push(variant);
+      } else {
+        productDict[product.name] = {
+          productName: product.name,
+          productStyleNumber: product.style,
+          productSeasonMetafield: product.season,
+          productType: product.category,
+          productTags: product.tags,
+          productCanceled: false,
+          productReceivedDate: null,
+          productVariants: [variant],
         };
-
-        totalVariantQuantity += variant.variantQuantity;
-
-        if (productDict[productName]) {
-          productDict[productName].productVariants.push(variant);
-          if (product.preorder) {
-            productDict[productName].productTags = product.tags;
-          }
-        } else {
-          productDict[productName] = {
-            productName: productName,
-            productStyleNumber: product.style,
-            productSeasonMetafield: product.season,
-            productType: product.category,
-            productTags: product.tags,
-            productCanceled: false,
-            productReceivedDate: null,
-            productVariants: [variant],
-          };
-          totalProductQuantity++;
-        }
-      });
-
-      schema.totalProductQuantity = totalProductQuantity;
-      schema.totalVariantQuantity = totalVariantQuantity;
-      schema.products = Object.values(productDict);
-
-      // Debug: Log the schema
-      console.log("Purchase Order Schema:", JSON.stringify(schema, null, 2));
-
-      // Validate schema
-      if (!validateSchema(schema)) {
-        return; // Validation errors will be displayed
+        totalProductQuantity++;
       }
+    });
 
-      // Check for duplicate orders
+    schema.totalProductQuantity = totalProductQuantity;
+    schema.totalVariantQuantity = totalVariantQuantity;
+    schema.products = Object.values(productDict);
+  };
+
+  const fillPurchaseOrderCredits = (schema: any) => {
+    schema.purchaseOrderCredits = credits.map(credit => ({
+      creditDate: credit.date,
+      creditDescription: credit.description,
+      creditMethod: credit.method,
+      creditAmount: credit.amount,
+    }));
+  };
+
+  const fillPurchaseOrderPayments = (schema: any) => {
+    schema.purchaseOrderPayments = payments.map(payment => ({
+      paymentDate: payment.date,
+      paymentDescription: payment.description,
+      paymentMethod: payment.method,
+      paymentAmount: payment.amount,
+    }));
+  };
+
+  const validateSchema = async (schema: any): Promise<boolean> => {
+    try {
       const token = localStorage.getItem("bridesbyldToken");
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
       const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
 
-      const duplicateResponse = await fetch(
+      const response = await fetch(
         `${apiBaseUrl}${basePath}/shopify/checkDuplicateOrder?brand=${schema.brand}&brandPoNumber=${schema.brandPoNumber}`,
         {
           headers: {
@@ -889,17 +840,112 @@ export default function PurchaseOrderImport() {
         }
       );
 
-      if (!duplicateResponse.ok) {
-        throw new Error(`HTTP error! status: ${duplicateResponse.status}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const duplicateData = await duplicateResponse.json();
-      if (duplicateData.duplicate) {
-        setValidationErrors(["Combination of brand and PO number already exists"]);
-        return;
+      const data = await response.json();
+      if (data.duplicate) {
+        setError("Combination of brand and PO number already exists");
+        return false;
+      }
+    } catch (error) {
+      console.error(error);
+      setError("There was an error checking for duplicate orders. Please try again later.");
+      return false;
+    }
+
+    // Basic validation
+    if (!schema.brand || schema.brand === "undefined") {
+      setError("Brand is empty or null");
+      return false;
+    }
+
+    if (!schema.purchaseOrderID) {
+      setError("Purchase Order ID is empty or null");
+      return false;
+    }
+
+    if (!schema.purchaseOrderTotalItemsCost) {
+      setError("Purchase Order Total Items Cost is empty or null");
+      return false;
+    }
+
+    // Validate products
+    for (let product of schema.products) {
+      if (!product.productName) {
+        setError("Product name is empty or null for a product");
+        return false;
       }
 
-      // Submit the order
+      if (!product.productSeasonMetafield) {
+        setError("Product season metafield is empty or null for a product");
+        return false;
+      }
+
+      if (!product.productType) {
+        setError("Product type is empty or null for a product");
+        return false;
+      }
+
+      if (!product.productTags) {
+        setError("Product tags is empty or null for a product");
+        return false;
+      }
+
+      for (let variant of product.productVariants) {
+        if (!variant.variantColor) {
+          setError("Variant color is empty or null for a product variant");
+          return false;
+        }
+
+        if (!variant.variantSize) {
+          setError("Variant size is empty or null for a product variant");
+          return false;
+        }
+
+        if (!variant.variantQuantity) {
+          setError("Variant quantity is empty or null for a product variant");
+          return false;
+        }
+
+        if (!variant.variantCost || variant.variantCost === "0") {
+          setError("Variant cost is empty or null for a product variant");
+          return false;
+        }
+
+        if (!variant.variantRetail || variant.variantRetail === "0") {
+          setError("Variant retail is empty or null for a product variant");
+          return false;
+        }
+
+        if (!variant.variantSku) {
+          setError("Variant SKU is empty or null for a product variant");
+          return false;
+        }
+
+        if (!variant.variantBarcode) {
+          setError("Variant barcode is empty or null for a product variant");
+          return false;
+        }
+
+        if (variant.variantPreOrder === undefined) {
+          setError("Variant pre order is undefined for a product variant");
+          return false;
+        }
+      }
+    }
+
+    return true;
+  };
+
+  const sendPurchaseOrder = async (schema: any) => {
+    console.log("sending purchase order");
+    try {
+      const token = localStorage.getItem("bridesbyldToken");
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
       const response = await fetch(`${apiBaseUrl}${basePath}/shopify/saveDraftPurchaseorder`, {
         method: "POST",
         headers: {
@@ -914,646 +960,621 @@ export default function PurchaseOrderImport() {
       }
 
       const data = await response.json();
-      console.log("Order saved successfully:", data);
-      
-      // Show success message
-      setError("");
-      setValidationErrors([]);
-      alert("Draft Purchase order submitted successfully");
-      
+      console.log(data);
+      return data;
     } catch (error) {
-      console.error("Error saving purchase order:", error);
-      setValidationErrors([error instanceof Error ? error.message : "Failed to save purchase order"]);
+      console.error("Error:", error);
+      throw error;
+    }
+  };
+
+  const createPurchaseOrder = async () => {
+    let schema: any = {};
+
+    fillBasicDetails(schema);
+    fillProducts(schema);
+    fillPurchaseOrderCredits(schema);
+    fillPurchaseOrderPayments(schema);
+
+    // Debug: Log the complete schema
+    console.log("Purchase Order Schema:", JSON.stringify(schema, null, 2));
+
+    if (!(await validateSchema(schema))) {
+      return;
+    }
+
+    try {
+      await sendPurchaseOrder(schema);
+      setIsSubmitted(true);
+      setServerMessages(prev => [
+        ...prev,
+        { message: "Draft Purchase order submitted successfully", isError: false }
+      ]);
+    } catch (error) {
+      console.error("Error:", error);
+      setError("OOPS, we ran into a snag, this purchase order was not submitted successfully");
+    }
+  };
+
+  const handleSave = async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      await createPurchaseOrder();
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Group products by style for alternating row colors
-  const getRowColorClass = (product: Product, index: number) => {
-    const currentStyle = product.name;
-    const previousProduct = index > 0 ? products[index - 1] : null;
-    const previousStyle = previousProduct?.name;
-    
-    // Find the first occurrence of this style
-    const firstOccurrenceIndex = products.findIndex(p => p.name === currentStyle);
-    const styleGroupIndex = [...new Set(products.slice(0, firstOccurrenceIndex + 1).map(p => p.name))].length - 1;
-    
-    return styleGroupIndex % 2 === 0 ? "bg-white" : "bg-slate-50";
-  };
+  const groupedProducts = getGroupedProducts();
 
   return (
     <Layout title="New Draft Order" showHeader={true} showFooter={false}>
-      <div className="flex w-full">
-        {/* Main Content */}
-        <div className="flex-1 px-6 py-6 space-y-6">
-          {/* Header Section */}
-          <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                  New Draft Order:
-                  <span className="bg-yellow-200 text-yellow-800 px-3 py-1 rounded-lg text-sm font-medium">
-                    DRAFT
-                  </span>
-                </h1>
-                <p className="text-slate-600 mt-1">Import purchase order from Excel file</p>
+      <div className="w-full px-6 py-6 space-y-6">
+        {/* Header Section */}
+        <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                New Draft Order:
+                <span className="bg-yellow-200 text-yellow-800 px-3 py-1 rounded-lg text-sm font-medium">
+                  DRAFT
+                </span>
+              </h1>
+              <p className="text-slate-600 mt-1">Import purchase order from Excel file</p>
 
-                {/* Socket Connection Status */}
-                <div className="flex items-center gap-2 mt-2">
-                  {socketConnected ? (
-                    <div className="flex items-center gap-1 text-green-600">
-                      <Wifi className="w-4 h-4" />
-                      <span className="text-sm">Connected</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1 text-red-600">
-                      <WifiOff className="w-4 h-4" />
-                      <span className="text-sm">Disconnected</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button variant="secondary" size="sm">
-                  Switch to NeOrder
-                </Button>
-
-                <div className="flex gap-2">
-                  <div className="relative">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".xlsx,.xls"
-                      onChange={handleFileSelect}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    />
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <FileSpreadsheet className="w-4 h-4" />
-                      {selectedFile ? selectedFile.name : "Choose Excel File"}
-                    </Button>
+              {/* Socket Connection Status */}
+              <div className="flex items-center gap-2 mt-2">
+                {socketConnected ? (
+                  <div className="flex items-center gap-1 text-green-600">
+                    <Wifi className="w-4 h-4" />
+                    <span className="text-sm">Connected</span>
                   </div>
-                  <Button
-                    onClick={handleFileUpload}
-                    isLoading={isLoading}
-                    disabled={!selectedFile}
-                    className="flex items-center gap-2"
-                  >
-                    <Upload className="w-4 h-4" />
-                    Upload
-                  </Button>
-                </div>
+                ) : (
+                  <div className="flex items-center gap-1 text-red-600">
+                    <WifiOff className="w-4 h-4" />
+                    <span className="text-sm">Disconnected</span>
+                  </div>
+                )}
               </div>
             </div>
-          </Card>
 
-          {/* Error Display */}
-          {error && (
-            <Card className="border-red-200 bg-red-50">
-              <div className="flex items-center gap-2 text-red-700">
-                <AlertCircle className="w-5 h-5" />
-                <span>{error}</span>
-              </div>
-            </Card>
-          )}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button variant="secondary" size="sm">
+                Switch to NeOrder
+              </Button>
 
-          {/* Vendor Selection */}
-          <Card>
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Vendor Information</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <label className="flex items-center gap-2">
+              <div className="flex gap-2">
+                <div className="relative">
                   <input
-                    type="radio"
-                    name="vendorType"
-                    value="existing"
-                    checked={formData.vendorType === "existing"}
-                    onChange={(e) => setFormData({ ...formData, vendorType: e.target.value })}
-                    className="text-purple-600"
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleFileSelect}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
-                  <span className="font-medium">Existing Brand</span>
-                </label>
-                <select
-                  value={formData.selectedVendor}
-                  onChange={(e) => setFormData({ ...formData, selectedVendor: e.target.value })}
-                  disabled={formData.vendorType !== "existing"}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-slate-100"
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <FileSpreadsheet className="w-4 h-4" />
+                    {selectedFile ? selectedFile.name : "Choose Excel File"}
+                  </Button>
+                </div>
+                <Button
+                  onClick={handleFileUpload}
+                  isLoading={isLoading}
+                  disabled={!selectedFile}
+                  className="flex items-center gap-2"
                 >
-                  <option value="">Choose vendor...</option>
-                  {vendors.map((vendor) => (
-                    <option key={vendor} value={vendor}>
-                      {vendor}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-3">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="vendorType"
-                    value="new"
-                    checked={formData.vendorType === "new"}
-                    onChange={(e) => setFormData({ ...formData, vendorType: e.target.value })}
-                    className="text-purple-600"
-                  />
-                  <span className="font-medium">New Brand</span>
-                </label>
-                <Input
-                  value={formData.newVendor}
-                  onChange={(e) => setFormData({ ...formData, newVendor: e.target.value })}
-                  disabled={formData.vendorType !== "new"}
-                  placeholder="Enter new vendor name"
-                />
+                  <Upload className="w-4 h-4" />
+                  Upload
+                </Button>
               </div>
             </div>
-          </Card>
-
-          {/* Season & Order Details */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Season Constructor</h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField label="Season">
-                    <select
-                      value={formData.season}
-                      onChange={(e) => setFormData({ ...formData, season: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                    >
-                      {seasonOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </FormField>
-
-                  <FormField label="Year">
-                    <select
-                      value={formData.yearSeason}
-                      onChange={(e) => setFormData({ ...formData, yearSeason: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                    >
-                      {yearOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </FormField>
-                </div>
-
-                <FormField label="Brand Season (Optional)">
-                  <Input
-                    value={formData.brandSeason}
-                    onChange={(e) => setFormData({ ...formData, brandSeason: e.target.value })}
-                    placeholder="e.g., Zimmermann"
-                  />
-                </FormField>
-
-                <div className="p-3 bg-slate-50 rounded-lg">
-                  <span className="text-sm font-medium text-slate-700">Generated Season: </span>
-                  <span className="font-bold text-purple-600">{generateSeasonString()}</span>
-                </div>
-              </div>
-            </Card>
-
-            <Card>
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Order Details</h3>
-              <div className="grid grid-cols-1 gap-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField label="Brand PO">
-                    <Input
-                      value={formData.brandPO}
-                      onChange={(e) => setFormData({ ...formData, brandPO: e.target.value })}
-                      placeholder="Brand PO number"
-                    />
-                  </FormField>
-
-                  <FormField label="Created Date">
-                    <Input
-                      type="date"
-                      value={formData.createdDate}
-                      onChange={(e) => setFormData({ ...formData, createdDate: e.target.value })}
-                      icon={<Calendar className="w-4 h-4 text-slate-400" />}
-                    />
-                  </FormField>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField label="Start Ship Date">
-                    <Input
-                      type="date"
-                      value={formData.startShipDate}
-                      onChange={(e) => setFormData({ ...formData, startShipDate: e.target.value })}
-                      icon={<Calendar className="w-4 h-4 text-slate-400" />}
-                    />
-                  </FormField>
-
-                  <FormField label="Complete Date">
-                    <Input
-                      type="date"
-                      value={formData.completeDate}
-                      onChange={(e) => setFormData({ ...formData, completeDate: e.target.value })}
-                      icon={<Calendar className="w-4 h-4 text-slate-400" />}
-                    />
-                  </FormField>
-                </div>
-              </div>
-            </Card>
           </div>
+        </Card>
 
-          {/* Product Controls */}
-          <Card>
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Product Controls</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <FormField label="Category">
-                <div className="flex gap-2">
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="">Choose category...</option>
-                    {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                  <Button
-                    size="sm"
-                    onClick={() => applyToSelected("category", formData.category)}
-                    disabled={!formData.category}
-                  >
-                    Apply
-                  </Button>
-                  <Button size="sm" variant="danger" onClick={() => applyToSelected("category", "")}>
-                    Clear
-                  </Button>
-                </div>
-              </FormField>
+        {/* Server Messages */}
+        {serverMessages.length > 0 && (
+          <Card className="max-h-32 overflow-y-auto">
+            <h3 className="text-sm font-semibold text-slate-900 mb-2">Server Messages</h3>
+            <div className="space-y-1">
+              {serverMessages.slice(-5).map((msg, index) => (
+                <p
+                  key={index}
+                  className={`text-xs ${msg.isError ? "text-red-600" : "text-green-600"}`}
+                >
+                  {msg.message}
+                </p>
+              ))}
+            </div>
+          </Card>
+        )}
 
-              <FormField label="Preorder">
-                <div className="flex gap-2">
-                  <select
-                    value={formData.preorder}
-                    onChange={(e) => setFormData({ ...formData, preorder: e.target.value })}
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="false">No</option>
-                    <option value="true">Yes</option>
-                  </select>
-                  <Button
-                    size="sm"
-                    onClick={() => applyToSelected("preorder", formData.preorder === "true")}
-                  >
-                    Apply
-                  </Button>
-                </div>
-              </FormField>
+        {/* Error Display */}
+        {error && (
+          <Card className="border-red-200 bg-red-50">
+            <div className="flex items-center gap-2 text-red-700">
+              <AlertCircle className="w-5 h-5" />
+              <span>{error}</span>
+            </div>
+          </Card>
+        )}
 
-              <FormField label="Standard Sizing">
-                <div className="flex gap-2">
+        {/* Vendor Selection */}
+        <Card>
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Vendor Information</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="vendorType"
+                  value="existing"
+                  checked={formData.vendorType === "existing"}
+                  onChange={(e) => setFormData({ ...formData, vendorType: e.target.value })}
+                  className="text-purple-600"
+                />
+                <span className="font-medium">Existing Brand</span>
+              </label>
+              <select
+                value={formData.selectedVendor}
+                onChange={(e) => setFormData({ ...formData, selectedVendor: e.target.value })}
+                disabled={formData.vendorType !== "existing"}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-slate-100"
+              >
+                <option value="">Choose vendor...</option>
+                {vendors.map((vendor) => (
+                  <option key={vendor} value={vendor}>
+                    {vendor}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-3">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="vendorType"
+                  value="new"
+                  checked={formData.vendorType === "new"}
+                  onChange={(e) => setFormData({ ...formData, vendorType: e.target.value })}
+                  className="text-purple-600"
+                />
+                <span className="font-medium">New Brand</span>
+              </label>
+              <Input
+                value={formData.newVendor}
+                onChange={(e) => setFormData({ ...formData, newVendor: e.target.value })}
+                disabled={formData.vendorType !== "new"}
+                placeholder="Enter new vendor name"
+              />
+            </div>
+          </div>
+        </Card>
+
+        {/* Season & Order Details */}
+        <Card>
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Season & Order Details</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Season Constructor - Left Half */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-slate-700">Season Constructor</h4>
+              <div className="grid grid-cols-3 gap-3">
+                <FormField label="Season">
                   <select
-                    value={formData.sizing}
-                    onChange={(e) => setFormData({ ...formData, sizing: e.target.value })}
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    value={formData.season}
+                    onChange={(e) => setFormData({ ...formData, season: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                   >
-                    {sizingOptions.map((option) => (
+                    {seasonOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
                     ))}
                   </select>
-                  <Button size="sm" onClick={applyStandardSizing}>Apply</Button>
-                </div>
-              </FormField>
-            </div>
-          </Card>
+                </FormField>
 
-          {/* Products Table */}
-          {products.length > 0 && (
-            <Card padding="none">
-              <div className="p-6 border-b border-slate-200">
-                <h3 className="text-lg font-semibold text-slate-900">Products ({products.length})</h3>
+                <FormField label="Brand Season">
+                  <Input
+                    value={formData.brandSeason}
+                    onChange={(e) => setFormData({ ...formData, brandSeason: e.target.value })}
+                    placeholder="Optional"
+                  />
+                </FormField>
+
+                <FormField label="Year">
+                  <select
+                    value={formData.yearSeason}
+                    onChange={(e) => setFormData({ ...formData, yearSeason: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  >
+                    {yearOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="px-4 py-3 text-left">
+              
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <span className="text-sm text-slate-600">Generated Season: </span>
+                <span className="font-medium text-slate-900">{generateSeasonString()}</span>
+              </div>
+            </div>
+
+            {/* Order Details - Right Half */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-slate-700">Order Information</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label="Brand PO">
+                  <Input
+                    value={formData.brandPO}
+                    onChange={(e) => setFormData({ ...formData, brandPO: e.target.value })}
+                    placeholder="Brand PO number"
+                  />
+                </FormField>
+
+                <FormField label="Created Date">
+                  <Input
+                    type="date"
+                    value={formData.createdDate}
+                    onChange={(e) => setFormData({ ...formData, createdDate: e.target.value })}
+                    icon={<Calendar className="w-4 h-4 text-slate-400" />}
+                  />
+                </FormField>
+
+                <FormField label="Start Ship Date">
+                  <Input
+                    type="date"
+                    value={formData.startShipDate}
+                    onChange={(e) => setFormData({ ...formData, startShipDate: e.target.value })}
+                    icon={<Calendar className="w-4 h-4 text-slate-400" />}
+                  />
+                </FormField>
+
+                <FormField label="Complete Date">
+                  <Input
+                    type="date"
+                    value={formData.completeDate}
+                    onChange={(e) => setFormData({ ...formData, completeDate: e.target.value })}
+                    icon={<Calendar className="w-4 h-4 text-slate-400" />}
+                  />
+                </FormField>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Product Controls */}
+        <Card>
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Product Controls</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <FormField label="Category">
+              <div className="flex gap-2">
+                <select
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="">Choose category...</option>
+                  {categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  size="sm"
+                  onClick={() => applyToSelected("category", formData.category)}
+                  disabled={!formData.category}
+                >
+                  Apply
+                </Button>
+                <Button size="sm" variant="danger" onClick={() => applyToSelected("category", "")}>
+                  Clear
+                </Button>
+              </div>
+            </FormField>
+
+            <FormField label="Preorder">
+              <div className="flex gap-2">
+                <select
+                  value={formData.preorder}
+                  onChange={(e) => setFormData({ ...formData, preorder: e.target.value })}
+                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="false">No</option>
+                  <option value="true">Yes</option>
+                </select>
+                <Button
+                  size="sm"
+                  onClick={() => applyToSelected("preorder", formData.preorder === "true")}
+                >
+                  Apply
+                </Button>
+              </div>
+            </FormField>
+
+            <FormField label="Standard Sizing">
+              <div className="flex gap-2">
+                <select
+                  value={formData.sizing}
+                  onChange={(e) => setFormData({ ...formData, sizing: e.target.value })}
+                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                >
+                  {sizingOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <Button size="sm" onClick={applyStandardSizing}>
+                  Apply
+                </Button>
+              </div>
+            </FormField>
+
+            <FormField label="Terms">
+              <select
+                value={formData.terms}
+                onChange={(e) => setFormData({ ...formData, terms: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="100% Before Delivery">100% Before Delivery</option>
+                <option value="50% Deposit, 50% Before Delivery">50% Deposit, 50% Before Delivery</option>
+                <option value="30% Deposit, 70% Before Delivery">30% Deposit, 70% Before Delivery</option>
+                <option value="Net 30">Net 30</option>
+              </select>
+            </FormField>
+          </div>
+        </Card>
+
+        {/* Products Table */}
+        {products.length > 0 && (
+          <Card padding="none">
+            <div className="p-6 border-b border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-900">Products ({products.length})</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left">
+                      <button
+                        onClick={handleSelectAll}
+                        className="flex items-center justify-center w-5 h-5 border border-slate-300 rounded hover:bg-slate-100"
+                      >
+                        {selectAll ? (
+                          <CheckSquare className="w-4 h-4 text-purple-600" />
+                        ) : (
+                          <Square className="w-4 h-4" />
+                        )}
+                      </button>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Name</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Style</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Color</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Size</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Qty</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Cost</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Retail</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">SKU</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Barcode</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Season</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Category</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Tags</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Preorder</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Margin</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {products.map((product) => (
+                    <tr key={product.id} className={getRowColorClass(product.name, groupedProducts)}>
+                      <td className="px-4 py-3">
                         <button
-                          onClick={handleSelectAll}
+                          onClick={() => handleProductSelect(product.id)}
                           className="flex items-center justify-center w-5 h-5 border border-slate-300 rounded hover:bg-slate-100"
                         >
-                          {selectAll ? (
+                          {product.selected ? (
                             <CheckSquare className="w-4 h-4 text-purple-600" />
                           ) : (
                             <Square className="w-4 h-4" />
                           )}
                         </button>
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Name
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Style
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Color
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Size
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Qty
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Cost
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Retail
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        SKU
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Barcode
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Category
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Preorder
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Margin
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Total
-                      </th>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-900">{product.name}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{product.style}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{product.color}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{product.size}</td>
+                      <td className="px-4 py-3 text-sm text-slate-900 font-medium">{product.quantity}</td>
+                      <td className="px-4 py-3 text-sm text-slate-900">${product.cost.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-sm text-slate-900">${product.retail.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600 font-mono">{product.sku}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600 font-mono">{product.barcode}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{product.season}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{product.category}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate" title={product.tags}>
+                        {product.tags}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                            product.preorder
+                              ? "bg-red-100 text-red-800"
+                              : "bg-green-100 text-green-800"
+                          }`}
+                        >
+                          {product.preorder ? "Yes" : "No"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-900">{product.margin.toFixed(1)}%</td>
+                      <td className="px-4 py-3 text-sm text-slate-900 font-medium">${product.total.toFixed(2)}</td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {products.map((product, index) => (
-                      <tr key={product.id} className={getRowColorClass(product, index)}>
-                        <td className="px-4 py-3">
-                          <button
-                            onClick={() => handleProductSelect(product.id)}
-                            className="flex items-center justify-center w-5 h-5 border border-slate-300 rounded hover:bg-slate-100"
-                          >
-                            {product.selected ? (
-                              <CheckSquare className="w-4 h-4 text-purple-600" />
-                            ) : (
-                              <Square className="w-4 h-4" />
-                            )}
-                          </button>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-900">{product.name}</td>
-                        <td className="px-4 py-3 text-sm text-slate-600">{product.style}</td>
-                        <td className="px-4 py-3 text-sm text-slate-600">{product.color}</td>
-                        <td className="px-4 py-3 text-sm text-slate-600">{product.size}</td>
-                        <td className="px-4 py-3 text-sm text-slate-900 font-medium">
-                          {product.quantity}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-900">
-                          ${product.cost.toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-900">
-                          ${product.retail.toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-600 font-mono">{product.sku}</td>
-                        <td className="px-4 py-3 text-sm text-slate-600 font-mono">
-                          {product.barcode}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-600">{product.category}</td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                              product.preorder
-                                ? "bg-red-100 text-red-800"
-                                : "bg-green-100 text-green-800"
-                            }`}
-                          >
-                            {product.preorder ? "Yes" : "No"}
-                          </span>
-                        </td>
-                        <td className={`px-4 py-3 text-sm font-medium ${
-                          product.margin < 56 ? "text-red-600 bg-red-50" : "text-slate-900"
-                        }`}>
-                          {product.margin.toFixed(1)}%
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-900 font-medium">
-                          ${product.total.toFixed(2)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          )}
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
 
-          {/* Financial Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Credits */}
-            <Card>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900">Credits</h3>
-                <Button size="sm" onClick={addCredit} className="flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  Add Credit
-                </Button>
-              </div>
-              <div className="space-y-3">
-                {credits.map((credit) => (
-                  <div key={credit.id} className="flex gap-2 items-center">
-                    <Input
-                      type="date"
-                      value={credit.date}
-                      onChange={(e) => updateCredit(credit.id, "date", e.target.value)}
-                      className="flex-1"
-                    />
-                    <Input
-                      placeholder="Description"
-                      value={credit.description}
-                      onChange={(e) => updateCredit(credit.id, "description", e.target.value)}
-                      className="flex-1"
-                    />
-                    <select
-                      value={credit.method}
-                      onChange={(e) => updateCredit(credit.id, "method", e.target.value)}
-                      className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value="cash">Cash</option>
-                      <option value="credit">Credit Card</option>
-                    </select>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="Amount"
-                      value={credit.amount || ""}
-                      onChange={(e) =>
-                        updateCredit(credit.id, "amount", parseFloat(e.target.value) || 0)
-                      }
-                      icon={<DollarSign className="w-4 h-4 text-slate-400" />}
-                      className="w-32"
-                    />
-                    <Button size="sm" variant="danger" onClick={() => removeCredit(credit.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            {/* Payments */}
-            <Card>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900">Payments</h3>
-                <Button size="sm" onClick={addPayment} className="flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  Add Payment
-                </Button>
-              </div>
-              <div className="space-y-3">
-                {payments.map((payment) => (
-                  <div key={payment.id} className="flex gap-2 items-center">
-                    <Input
-                      type="date"
-                      value={payment.date}
-                      onChange={(e) => updatePayment(payment.id, "date", e.target.value)}
-                      className="flex-1"
-                    />
-                    <Input
-                      placeholder="Description"
-                      value={payment.description}
-                      onChange={(e) => updatePayment(payment.id, "description", e.target.value)}
-                      className="flex-1"
-                    />
-                    <select
-                      value={payment.method}
-                      onChange={(e) => updatePayment(payment.id, "method", e.target.value)}
-                      className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value="cash">Cash</option>
-                      <option value="credit">Credit Card</option>
-                    </select>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="Amount"
-                      value={payment.amount || ""}
-                      onChange={(e) =>
-                        updatePayment(payment.id, "amount", parseFloat(e.target.value) || 0)
-                      }
-                      icon={<DollarSign className="w-4 h-4 text-slate-400" />}
-                      className="w-32"
-                    />
-                    <Button size="sm" variant="danger" onClick={() => removePayment(payment.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </div>
-
-          {/* Notes and Totals */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <FormField label="Notes">
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  rows={6}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  placeholder="Add any notes about this order..."
-                />
-              </FormField>
-            </Card>
-
-            <Card>
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Order Totals</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Sub-Total:</span>
-                  <span className="font-medium">${totals.subTotal.toFixed(2)}</span>
+        {/* Financial Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Credits */}
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Credits</h3>
+              <Button size="sm" onClick={addCredit} className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Add Credit
+              </Button>
+            </div>
+            <div className="space-y-3">
+              {credits.map((credit) => (
+                <div key={credit.id} className="flex gap-2 items-center">
+                  <Input
+                    type="date"
+                    value={credit.date}
+                    onChange={(e) => updateCredit(credit.id, "date", e.target.value)}
+                    className="flex-1"
+                  />
+                  <Input
+                    placeholder="Description"
+                    value={credit.description}
+                    onChange={(e) => updateCredit(credit.id, "description", e.target.value)}
+                    className="flex-1"
+                  />
+                  <select
+                    value={credit.method}
+                    onChange={(e) => updateCredit(credit.id, "method", e.target.value)}
+                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="cash">Cash</option>
+                    <option value="credit">Credit Card</option>
+                  </select>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="Amount"
+                    value={credit.amount || ""}
+                    onChange={(e) =>
+                      updateCredit(credit.id, "amount", parseFloat(e.target.value) || 0)
+                    }
+                    icon={<DollarSign className="w-4 h-4 text-slate-400" />}
+                    className="w-32"
+                  />
+                  <Button size="sm" variant="danger" onClick={() => removeCredit(credit.id)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Payments:</span>
-                  <span className="font-medium">${totals.paymentTotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Credits:</span>
-                  <span className="font-medium">${totals.creditTotal.toFixed(2)}</span>
-                </div>
-                <hr className="border-slate-200" />
-                <div className="flex justify-between text-lg font-bold">
-                  <span>Total Balance Due:</span>
-                  <span className="text-purple-600">${totals.grandTotal.toFixed(2)}</span>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Save Button */}
-          <Card className="text-center">
-            <Button
-              size="lg"
-              onClick={handleSave}
-              isLoading={isLoading}
-              className="flex items-center gap-2 mx-auto"
-            >
-              <Save className="w-5 h-5" />
-              Save Draft Order
-            </Button>
+              ))}
+            </div>
           </Card>
 
-          {/* Validation Errors - Moved below submit button */}
-          {validationErrors.length > 0 && (
-            <Card className="border-red-200 bg-red-50">
-              <h3 className="text-sm font-semibold text-red-900 mb-2">Validation Errors</h3>
-              <div className="space-y-1">
-                {validationErrors.map((error, index) => (
-                  <div key={index} className="flex items-center gap-2 text-red-700">
-                    <AlertCircle className="w-4 h-4" />
-                    <span className="text-sm">{error}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
+          {/* Payments */}
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Payments</h3>
+              <Button size="sm" onClick={addPayment} className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Add Payment
+              </Button>
+            </div>
+            <div className="space-y-3">
+              {payments.map((payment) => (
+                <div key={payment.id} className="flex gap-2 items-center">
+                  <Input
+                    type="date"
+                    value={payment.date}
+                    onChange={(e) => updatePayment(payment.id, "date", e.target.value)}
+                    className="flex-1"
+                  />
+                  <Input
+                    placeholder="Description"
+                    value={payment.description}
+                    onChange={(e) => updatePayment(payment.id, "description", e.target.value)}
+                    className="flex-1"
+                  />
+                  <select
+                    value={payment.method}
+                    onChange={(e) => updatePayment(payment.id, "method", e.target.value)}
+                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="cash">Cash</option>
+                    <option value="credit">Credit Card</option>
+                  </select>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="Amount"
+                    value={payment.amount || ""}
+                    onChange={(e) =>
+                      updatePayment(payment.id, "amount", parseFloat(e.target.value) || 0)
+                    }
+                    icon={<DollarSign className="w-4 h-4 text-slate-400" />}
+                    className="w-32"
+                  />
+                  <Button size="sm" variant="danger" onClick={() => removePayment(payment.id)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
 
-        {/* Server Messages Sidebar */}
-        <div className="w-80 border-l border-slate-200 bg-slate-50">
-          <div className="p-4 border-b border-slate-200">
-            <h3 className="text-sm font-semibold text-slate-900">Server Messages</h3>
-          </div>
-          <div className="p-4 space-y-2 max-h-96 overflow-y-auto">
-            {serverMessages.length === 0 ? (
-              <p className="text-sm text-slate-500">No messages yet...</p>
-            ) : (
-              serverMessages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`p-2 rounded text-xs ${
-                    msg.isError 
-                      ? "bg-red-100 text-red-700 border border-red-200" 
-                      : "bg-green-100 text-green-700 border border-green-200"
-                  }`}
-                >
-                  {msg.message}
-                </div>
-              ))
-            )}
-          </div>
+        {/* Notes and Totals */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <FormField label="Notes">
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                rows={6}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                placeholder="Add any notes about this order..."
+              />
+            </FormField>
+          </Card>
+
+          <Card>
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Order Totals</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-slate-600">Sub-Total:</span>
+                <span className="font-medium">${totals.subTotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Payments:</span>
+                <span className="font-medium">${totals.paymentTotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Credits:</span>
+                <span className="font-medium">${totals.creditTotal.toFixed(2)}</span>
+              </div>
+              <hr className="border-slate-200" />
+              <div className="flex justify-between text-lg font-bold">
+                <span>Total Balance Due:</span>
+                <span className="text-purple-600">${totals.grandTotal.toFixed(2)}</span>
+              </div>
+            </div>
+          </Card>
         </div>
+
+        {/* Save Button */}
+        <Card className="text-center">
+          <Button
+            size="lg"
+            onClick={handleSave}
+            isLoading={isLoading}
+            disabled={isSubmitted}
+            className="flex items-center gap-2 mx-auto"
+          >
+            <Save className="w-5 h-5" />
+            {isSubmitted ? "Order Submitted" : "Save Draft Order"}
+          </Button>
+        </Card>
       </div>
     </Layout>
   );
