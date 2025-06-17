@@ -363,25 +363,25 @@ export default function Reminders() {
                   <div className="flex items-center space-x-2">
                     <AlertTriangle className="w-4 h-4 text-red-600" />
                     <span className="px-2 py-1 rounded border bg-red-100 text-red-800 border-red-200 text-xs font-medium">
-                      Overdue (>3 days late)
+                      {'Overdue (>3 days late)'}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Clock className="w-4 h-4 text-yellow-600" />
                     <span className="px-2 py-1 rounded border bg-yellow-100 text-yellow-800 border-yellow-200 text-xs font-medium">
-                      Urgent (≤2 days)
+                      {'Urgent (≤2 days)'}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Calendar className="w-4 h-4 text-blue-600" />
                     <span className="px-2 py-1 rounded border bg-blue-100 text-blue-800 border-blue-200 text-xs font-medium">
-                      Upcoming (≤7 days)
+                      {'Upcoming (≤7 days)'}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <CheckCircle className="w-4 h-4 text-slate-600" />
                     <span className="px-2 py-1 rounded border bg-slate-100 text-slate-800 border-slate-200 text-xs font-medium">
-                      Normal (>7 days)
+                      {'Normal (>7 days)'}
                     </span>
                   </div>
                 </div>
