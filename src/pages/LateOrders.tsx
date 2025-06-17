@@ -179,7 +179,7 @@ export default function LateOrders() {
   };
 
   const handleRowClick = (order: LateOrder) => {
-    // Navigate to detailed published order page with URL parameter
+    // Navigate to published order detail page with URL parameter
     navigate(`/published-order-detail?orderId=${order.purchaseOrderID}`);
   };
 
