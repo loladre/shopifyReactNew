@@ -553,6 +553,12 @@ export default function PublishedOrderDetail() {
                     <span className="font-semibold text-slate-900">Terms:</span>
                     <span className="text-slate-700">{order.terms}</span>
                   </div>
+                  <div className="space-y-1">
+                    <span className="font-semibold text-slate-900">Payment Terms:</span>
+                    <p className="text-sm text-slate-700">
+                      Deposit: {order.depositPercent}% - Delivery: {order.onDeliverPercent}% - Net30: {order.net30Percent}%
+                    </p>
+                  </div>
                 </div>
               </Card>
 
@@ -568,17 +574,6 @@ export default function PublishedOrderDetail() {
                     <span className="font-semibold text-slate-900">Start Ship:</span>
                     <span className="text-slate-700">{formatDate(order.startShipDate)}</span>
                   </div>
-                  <div className="space-y-1">
-                    <span className="font-semibold text-slate-900">Payment Terms:</span>
-                    <p className="text-sm text-slate-700">
-                      Deposit: {order.depositPercent}% - Delivery: {order.onDeliverPercent}% - Net30: {order.net30Percent}%
-                    </p>
-                  </div>
-                </div>
-              </Card>
-
-              <Card>
-                <div className="space-y-4">
                   <div className="flex items-center space-x-2">
                     <Calendar className="w-5 h-5 text-slate-400" />
                     <span className="font-semibold text-slate-900">Cancel:</span>
@@ -604,6 +599,11 @@ export default function PublishedOrderDetail() {
                       </div>
                     </div>
                   )}
+                </div>
+              </Card>
+
+              <Card>
+                <div className="space-y-4">
                   <div className="flex items-center space-x-2">
                     <FileText className="w-5 h-5 text-slate-400" />
                     <span className="font-semibold text-slate-900">Brand PO#:</span>
