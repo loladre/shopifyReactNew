@@ -112,9 +112,8 @@ export default function DraftOrders() {
   };
 
   const handleRowClick = (order: DraftOrder) => {
-    // Navigate to detailed draft order page
-    const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-    window.location.href = `${basePath}/orders/detailedDraftPurchaseOrder.html?orderId=${order.purchaseOrderID}`;
+    // Navigate to detailed draft order page with URL parameter
+    navigate(`/draft-order-detail?orderId=${order.purchaseOrderID}`);
   };
 
   const columns: Column[] = [
