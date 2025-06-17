@@ -6,6 +6,7 @@ import { Mail, Lock, Eye, EyeOff, Loader2, ShoppingBag } from 'lucide-react';
 import PurchaseOrderImport from './pages/PurchaseOrderImport';
 import Dashboard from './pages/Dashboard';
 import DraftOrders from './pages/DraftOrders';
+import DraftOrderDetail from './pages/DraftOrderDetail';
 import PublishedOrders from './pages/PublishedOrders';
 import Reorder from './pages/Reorder';
 import LateOrders from './pages/LateOrders';
@@ -306,6 +307,14 @@ function App() {
           element={
             <ProtectedRoute>
               <DraftOrders />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/draft-order-detail" 
+          element={
+            <ProtectedRoute>
+              <DraftOrderDetail />
             </ProtectedRoute>
           } 
         />
