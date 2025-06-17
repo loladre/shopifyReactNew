@@ -49,7 +49,9 @@ export default function PublishedOrders() {
   const [orders, setOrders] = useState<PublishedOrder[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<PublishedOrder[]>([]);
   const [selectedBrand, setSelectedBrand] = useState<string>('All Brands');
+  const [selectedSeason, setSelectedSeason] = useState<string>('All Seasons');
   const [brands, setBrands] = useState<string[]>([]);
+  const [seasons, setSeasons] = useState<string[]>([]);
   const [vendors, setVendors] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
@@ -68,8 +70,8 @@ export default function PublishedOrders() {
   }, []);
 
   useEffect(() => {
-    filterOrdersByBrand();
-  }, [selectedBrand, orders]);
+    filterOrders();
+  }, [selectedBrand, selectedSeason, orders]);
 
   const fetchPublishedOrders = async () => {
     try {
@@ -98,9 +100,12 @@ export default function PublishedOrders() {
       const data: PublishedOrder[] = await response.json();
       setOrders(data);
       
-      // Extract unique brands
+      // Extract unique brands and seasons
       const uniqueBrands = Array.from(new Set(data.map(order => order.brand))).sort();
+      const uniqueSeasons = Array.from(new Set(data.map(order => order.purchaseOrderSeason).filter(Boolean))).sort();
+      
       setBrands(uniqueBrands);
+      setSeasons(uniqueSeasons);
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -131,12 +136,20 @@ export default function PublishedOrders() {
     }
   };
 
-  const filterOrdersByBrand = () => {
-    if (selectedBrand === 'All Brands') {
-      setFilteredOrders(orders);
-    } else {
-      setFilteredOrders(orders.filter(order => order.brand === selectedBrand));
+  const filterOrders = () => {
+    let filtered = orders;
+
+    // Filter by brand
+    if (selectedBrand !== 'All Brands') {
+      filtered = filtered.filter(order => order.brand === selectedBrand);
     }
+
+    // Filter by season
+    if (selectedSeason !== 'All Seasons') {
+      filtered = filtered.filter(order => order.purchaseOrderSeason === selectedSeason);
+    }
+
+    setFilteredOrders(filtered);
   };
 
   const handleSearch = async () => {
@@ -166,7 +179,17 @@ export default function PublishedOrders() {
 
       const data: PublishedOrder[] = await response.json();
       setOrders(data);
-      setSelectedBrand('All Brands'); // Reset brand filter when searching
+      
+      // Update brands and seasons from search results
+      const uniqueBrands = Array.from(new Set(data.map(order => order.brand))).sort();
+      const uniqueSeasons = Array.from(new Set(data.map(order => order.purchaseOrderSeason).filter(Boolean))).sort();
+      
+      setBrands(uniqueBrands);
+      setSeasons(uniqueSeasons);
+      
+      // Reset filters when searching
+      setSelectedBrand('All Brands');
+      setSelectedSeason('All Seasons');
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Search failed');
@@ -416,23 +439,44 @@ export default function PublishedOrders() {
 
             {/* Filters */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Brand Filter */}
+              {/* Brand and Season Filters */}
               <Card>
-                <div className="flex items-center space-x-4">
-                  <label htmlFor="brandSelect" className="text-sm font-semibold text-slate-700">
-                    Filter by Brand:
-                  </label>
-                  <select
-                    id="brandSelect"
-                    value={selectedBrand}
-                    onChange={(e) => setSelectedBrand(e.target.value)}
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  >
-                    <option value="All Brands">All Brands</option>
-                    {brands.map(brand => (
-                      <option key={brand} value={brand}>{brand}</option>
-                    ))}
-                  </select>
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-slate-700">Filter Orders</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="brandSelect" className="block text-xs font-medium text-slate-600 mb-1">
+                        Filter by Brand:
+                      </label>
+                      <select
+                        id="brandSelect"
+                        value={selectedBrand}
+                        onChange={(e) => setSelectedBrand(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      >
+                        <option value="All Brands">All Brands</option>
+                        {brands.map(brand => (
+                          <option key={brand} value={brand}>{brand}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="seasonSelect" className="block text-xs font-medium text-slate-600 mb-1">
+                        Filter by Season:
+                      </label>
+                      <select
+                        id="seasonSelect"
+                        value={selectedSeason}
+                        onChange={(e) => setSelectedSeason(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      >
+                        <option value="All Seasons">All Seasons</option>
+                        {seasons.map(season => (
+                          <option key={season} value={season}>{season}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </Card>
 
