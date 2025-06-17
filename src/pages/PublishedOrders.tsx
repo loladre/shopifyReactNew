@@ -225,7 +225,7 @@ export default function PublishedOrders() {
   };
 
   const handleRowClick = (order: PublishedOrder) => {
-    // Navigate to published order detail page with URL parameter
+    // Navigate to detailed published order page with URL parameter
     navigate(`/published-order-detail?orderId=${order.purchaseOrderID}`);
   };
 

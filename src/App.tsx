@@ -8,7 +8,6 @@ import Dashboard from './pages/Dashboard';
 import DraftOrders from './pages/DraftOrders';
 import DraftOrderDetail from './pages/DraftOrderDetail';
 import PublishedOrders from './pages/PublishedOrders';
-import PublishedOrderDetail from './pages/PublishedOrderDetail';
 import Reorder from './pages/Reorder';
 import LateOrders from './pages/LateOrders';
 import Vendors from './pages/Vendors';
@@ -324,14 +323,6 @@ function App() {
           element={
             <ProtectedRoute>
               <PublishedOrders />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/published-order-detail" 
-          element={
-            <ProtectedRoute>
-              <PublishedOrderDetail />
             </ProtectedRoute>
           } 
         />
