@@ -1,6 +1,6 @@
-import React from 'react';
-import Header from './Header';
-import Footer from './Footer';
+import React from "react";
+import Header from "./Header";
+import Footer from "./Footer";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,12 +10,12 @@ interface LayoutProps {
   className?: string;
 }
 
-export default function Layout({ 
-  children, 
-  title, 
-  showHeader = true, 
+export default function Layout({
+  children,
+  title,
+  showHeader = true,
   showFooter = true,
-  className = '' 
+  className = "",
 }: LayoutProps) {
   // Update document title if provided
   React.useEffect(() => {
@@ -25,13 +25,13 @@ export default function Layout({
   }, [title]);
 
   return (
-    <div className={`min-h-screen flex flex-col bg-gradient-to-br from-slate-50 to-slate-100 ${className}`}>
+    <div
+      className={`min-h-screen flex flex-col bg-gradient-to-br from-slate-50 to-slate-100 ${className}`}
+    >
       {showHeader && <Header />}
-      
-      <main className="flex-1 relative w-full">
-        {children}
-      </main>
-      
+
+      <main className="flex-1 relative w-full">{children}</main>
+
       {showFooter && <Footer />}
     </div>
   );
