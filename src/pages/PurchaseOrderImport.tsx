@@ -20,16 +20,20 @@ import {
 } from "lucide-react";
 import * as ExcelJS from "exceljs";
 import { io, Socket } from "socket.io-client";
-import { 
-  getSizeMapping, 
-  getSizeMappingFilter, 
-  getMetaCategory, 
-  convertShoeSize, 
-  getProductType, 
+import {
+  selectMapping,
+  sizeMappings,
+  sizeMappingFilters,
+  shoeSizeFilter,
+  getSizeMapping,
+  getSizeMappingFilter,
+  getMetaCategory,
+  convertShoeSize,
+  getProductType,
   isDenimShorts,
   sizingOptions,
   seasonOptions,
-  yearOptions
+  yearOptions,
 } from "../utils/sizeConversions";
 
 interface Product {
@@ -72,6 +76,37 @@ interface Credit {
   amount: number;
 }
 
+interface PurchaseOrderSchema {
+  purchaseOrderID: number;
+  purchaseOrderNumber: string;
+  brand: string;
+  draftOrder: boolean;
+  publishedOrder: boolean;
+  createdDate: string;
+  startShipDate: string;
+  completedDate: string;
+  brandPoNumber: string;
+  purchaseOrderSeason: string;
+  terms: string;
+  depositPercent: string;
+  onDeliverPercent: string;
+  net30Percent: string;
+  purchaseOrderTotalPayments: string;
+  purchaseOrderTotalCredits: string;
+  purchaseOrderTotalItemsCost: string;
+  purchaseOrderBalanceDue: string;
+  purchaseOrderNotes: string;
+  purchaseOrderCompleteReceive: boolean;
+  totalVariantReceivedQuantity: number;
+  purchaseOrdertotalReceivedValue: number;
+  purchaseOrderFiles: any[];
+  totalProductQuantity: number;
+  totalVariantQuantity: number;
+  products: any[];
+  purchaseOrderCredits: any[];
+  purchaseOrderPayments: any[];
+}
+
 export default function PurchaseOrderImport() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -87,7 +122,8 @@ export default function PurchaseOrderImport() {
   const [serverMessages, setServerMessages] = useState<
     Array<{ message: string; isError: boolean }>
   >([]);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState("");
 
   // Form state
   const [formData, setFormData] = useState({
@@ -222,9 +258,14 @@ export default function PurchaseOrderImport() {
     calculateTotals();
   }, [products, payments, credits]);
 
-  // Update tags when season constructor or products change
+  // Update season and tags when season constructor changes
   useEffect(() => {
-    updateAllTags();
+    updateAllProductSeasons();
+  }, [formData.season, formData.brandSeason, formData.yearSeason, formData.startShipDate]);
+
+  // Update tags when preorder status changes
+  useEffect(() => {
+    updateAllProductTags();
   }, [formData.season, formData.brandSeason, formData.yearSeason, formData.startShipDate]);
 
   const loadVendors = async () => {
@@ -263,6 +304,44 @@ export default function PurchaseOrderImport() {
     } catch (error) {
       setError("Failed to load categories");
     }
+  };
+
+  const constructSeason = () => {
+    const { season, brandSeason, yearSeason } = formData;
+    if (brandSeason) {
+      return `${season} ${brandSeason} ${yearSeason}`;
+    }
+    return `${season}${yearSeason}`;
+  };
+
+  const constructTags = (product: Product) => {
+    const season = constructSeason();
+    let tags = [season];
+    
+    if (product.preorder) {
+      tags.push("preorder");
+      if (formData.startShipDate) {
+        tags.push(`Message2:282727:Ships by ${formData.startShipDate}`);
+      }
+    }
+    
+    return tags.join(",");
+  };
+
+  const updateAllProductSeasons = () => {
+    const season = constructSeason();
+    setProducts(products.map(product => ({
+      ...product,
+      season,
+      tags: constructTags(product)
+    })));
+  };
+
+  const updateAllProductTags = () => {
+    setProducts(products.map(product => ({
+      ...product,
+      tags: constructTags(product)
+    })));
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -400,12 +479,11 @@ export default function PurchaseOrderImport() {
 
           // Create individual products for each unit in the quantity
           for (let k = 0; k < quantityNum; k++) {
-            const productName = `${data[i][styleNamePos]} ${data[i][styleNumberPos]} ${data[i][colorPos]}`;
-            
-            newProducts.push({
+            const season = constructSeason();
+            const product: Product = {
               id: `${i}-${j}-${k}`,
               selected: false,
-              name: productName,
+              name: `${data[i][styleNamePos]} ${data[i][styleNumberPos]} ${data[i][colorPos]}`,
               style: data[i][styleNumberPos]?.toString() || "",
               color: data[i][colorPos]?.toString() || "",
               size: headers[j]?.toString() || "",
@@ -414,7 +492,7 @@ export default function PurchaseOrderImport() {
               retail,
               sku: skus[skuIndex++] || "",
               barcode: barcodes[barcodeIndex++] || "",
-              season: "",
+              season,
               category: "",
               tags: "",
               preorder: false,
@@ -424,7 +502,11 @@ export default function PurchaseOrderImport() {
               clothingSize: "",
               jeansSize: "",
               metaCategory: "",
-            });
+            };
+            
+            // Set initial tags
+            product.tags = constructTags(product);
+            newProducts.push(product);
           }
         }
       }
@@ -537,45 +619,6 @@ export default function PurchaseOrderImport() {
     setTotals({ subTotal, paymentTotal, creditTotal, grandTotal });
   };
 
-  const generateSeasonString = () => {
-    const { season, brandSeason, yearSeason } = formData;
-    if (brandSeason.trim()) {
-      return `${season} ${brandSeason} ${yearSeason}`;
-    } else {
-      return `${season}${yearSeason}`;
-    }
-  };
-
-  const generateTags = (product: Product) => {
-    const tags = [];
-    
-    // Add season
-    tags.push(generateSeasonString());
-    
-    // Add preorder if applicable
-    if (product.preorder) {
-      tags.push("preorder");
-      
-      // Add shipping message if start ship date is available
-      if (formData.startShipDate) {
-        const shipDate = new Date(formData.startShipDate).toLocaleDateString();
-        tags.push(`Message2:282727:Ships by ${shipDate}`);
-      }
-    }
-    
-    return tags.join(", ");
-  };
-
-  const updateAllTags = () => {
-    setProducts(prevProducts => 
-      prevProducts.map(product => ({
-        ...product,
-        tags: generateTags(product),
-        season: generateSeasonString()
-      }))
-    );
-  };
-
   const handleSelectAll = () => {
     const newSelectAll = !selectAll;
     setSelectAll(newSelectAll);
@@ -590,23 +633,20 @@ export default function PurchaseOrderImport() {
     );
   };
 
-  // Updated apply functions to work with same product names
   const applyToSelected = (field: string, value: any) => {
-    const selectedProducts = products.filter(p => p.selected);
-    if (selectedProducts.length === 0) return;
-
-    // Get unique product names from selected products
-    const selectedProductNames = [...new Set(selectedProducts.map(p => p.name))];
-
-    setProducts(prevProducts =>
-      prevProducts.map(product => {
-        // Apply to all products with the same name as any selected product
-        if (selectedProductNames.includes(product.name)) {
+    setProducts(
+      products.map((product) => {
+        if (product.selected) {
           const updatedProduct = { ...product, [field]: value };
           
-          // Update tags if preorder changed
+          // Update metaCategory when category changes
+          if (field === 'category') {
+            updatedProduct.metaCategory = getMetaCategory(value);
+          }
+          
+          // Update tags when preorder changes
           if (field === 'preorder') {
-            updatedProduct.tags = generateTags(updatedProduct);
+            updatedProduct.tags = constructTags(updatedProduct);
           }
           
           return updatedProduct;
@@ -616,48 +656,48 @@ export default function PurchaseOrderImport() {
     );
   };
 
-  // Apply standard sizing to entire order (only products with categories)
+  // Apply standard sizing to ALL products (not just selected)
   const applyStandardSizing = () => {
-    const sizingCountry = formData.sizing;
-    const sizeMapping = getSizeMapping(sizingCountry);
-    const sizeMappingFilter = getSizeMappingFilter(sizingCountry);
+    const sizeMapping = getSizeMapping(formData.sizing);
+    const sizeMappingFilter = getSizeMappingFilter(formData.sizing);
 
-    setProducts(prevProducts =>
-      prevProducts.map(product => {
-        // Only apply if product has a category
-        if (!product.category) return product;
-
-        const productType = getProductType(product.category);
-        const metaCategory = getMetaCategory(product.category);
-        
-        let updatedProduct = { ...product, metaCategory };
-
-        // Apply size mappings based on product type
-        if (productType === 'shoes') {
-          updatedProduct.shoeSize = convertShoeSize(product.size);
-          updatedProduct.clothingSize = "";
-          updatedProduct.jeansSize = "";
-        } else if (productType === 'jeans') {
-          if (isDenimShorts(product.category)) {
-            // Denim shorts use clothing size
-            updatedProduct.clothingSize = sizeMappingFilter[product.size] || product.size;
-            updatedProduct.jeansSize = "";
-          } else {
-            // Regular jeans use jeans size
-            updatedProduct.jeansSize = sizeMapping[product.size] || product.size;
-            updatedProduct.clothingSize = "";
+    setProducts(products.map(product => {
+      const updatedProduct = { ...product };
+      const productType = getProductType(product.category);
+      
+      if (productType === 'shoes') {
+        // For shoes, update shoeSize
+        updatedProduct.shoeSize = convertShoeSize(product.size);
+      } else if (productType === 'jeans') {
+        if (isDenimShorts(product.category)) {
+          // For denim shorts, apply size mapping and update both size display and jeansSize
+          if (sizeMapping[product.size]) {
+            updatedProduct.size = sizeMapping[product.size];
           }
-          updatedProduct.shoeSize = "";
+          updatedProduct.jeansSize = sizeMappingFilter[product.size] || product.size;
         } else {
-          // Clothing items
-          updatedProduct.clothingSize = sizeMappingFilter[product.size] || product.size;
-          updatedProduct.shoeSize = "";
-          updatedProduct.jeansSize = "";
+          // For regular jeans, just update jeansSize
+          updatedProduct.jeansSize = product.size;
         }
+      } else if (productType === 'clothing') {
+        // For clothing, apply size mapping and update clothingSize
+        if (sizeMapping[product.size]) {
+          updatedProduct.size = sizeMapping[product.size];
+        }
+        updatedProduct.clothingSize = sizeMappingFilter[product.size] || product.size;
+      }
+      
+      return updatedProduct;
+    }));
+  };
 
-        return updatedProduct;
-      })
-    );
+  const applySeason = () => {
+    const season = constructSeason();
+    setProducts(products.map(product => ({
+      ...product,
+      season,
+      tags: constructTags(product)
+    })));
   };
 
   const addPayment = () => {
@@ -703,70 +743,88 @@ export default function PurchaseOrderImport() {
   };
 
   // Group products by style for alternating row colors
-  const getGroupedProducts = () => {
-    const grouped: { [key: string]: Product[] } = {};
-    products.forEach(product => {
-      if (!grouped[product.name]) {
-        grouped[product.name] = [];
-      }
-      grouped[product.name].push(product);
-    });
-    return grouped;
-  };
-
-  const getRowColorClass = (productName: string, groupedProducts: { [key: string]: Product[] }) => {
-    const productNames = Object.keys(groupedProducts);
-    const groupIndex = productNames.indexOf(productName);
-    return groupIndex % 2 === 0 ? "bg-white" : "bg-slate-50";
-  };
-
-  // Submit functionality
-  const fillBasicDetails = (schema: any) => {
-    schema.purchaseOrderID = new Date().getTime();
-    schema.purchaseOrderNumber = formData.brandPO;
+  const getRowClassName = (product: Product, index: number) => {
+    const styleGroups: { [key: string]: number } = {};
+    let groupIndex = 0;
     
-    // Brand selection
+    products.forEach((p, i) => {
+      if (i <= index) {
+        if (!styleGroups[p.style]) {
+          styleGroups[p.style] = groupIndex++;
+        }
+      }
+    });
+    
+    const currentGroupIndex = styleGroups[product.style];
+    return currentGroupIndex % 2 === 0 ? "bg-white" : "bg-slate-50";
+  };
+
+  // Schema building functions
+  const fillBasicDetails = (schema: PurchaseOrderSchema) => {
+    // purchaseOrderID - use current epoch timestamp
+    schema.purchaseOrderID = new Date().getTime();
+
+    // purchaseOrderNumber
+    schema.purchaseOrderNumber = formData.brandPO;
+
+    // brand - check which radio button is selected
     if (formData.vendorType === "existing") {
       schema.brand = formData.selectedVendor;
     } else {
       schema.brand = formData.newVendor;
     }
-    
+
+    // draftOrder and publishedOrder
     schema.draftOrder = true;
     schema.publishedOrder = false;
+
+    // dates
     schema.createdDate = formData.createdDate;
     schema.startShipDate = formData.startShipDate;
     schema.completedDate = formData.completeDate;
+
+    // brandPoNumber
     schema.brandPoNumber = formData.brandPO;
-    schema.purchaseOrderSeason = generateSeasonString();
+
+    // season
+    schema.purchaseOrderSeason = constructSeason();
+
+    // terms
     schema.terms = formData.terms;
     schema.depositPercent = formData.deposit;
     schema.onDeliverPercent = formData.delivery;
     schema.net30Percent = formData.net30;
-    schema.purchaseOrderTotalPayments = totals.paymentTotal.toString();
-    schema.purchaseOrderTotalCredits = totals.creditTotal.toString();
-    schema.purchaseOrderTotalItemsCost = totals.subTotal.toString();
-    schema.purchaseOrderBalanceDue = totals.grandTotal.toString();
+
+    // totals
+    schema.purchaseOrderTotalPayments = totals.paymentTotal.toFixed(2);
+    schema.purchaseOrderTotalCredits = totals.creditTotal.toFixed(2);
+    schema.purchaseOrderTotalItemsCost = totals.subTotal.toFixed(2);
+    schema.purchaseOrderBalanceDue = totals.grandTotal.toFixed(2);
+
+    // notes
     schema.purchaseOrderNotes = formData.notes;
+
+    // defaults
     schema.purchaseOrderCompleteReceive = false;
     schema.totalVariantReceivedQuantity = 0;
     schema.purchaseOrdertotalReceivedValue = 0;
     schema.purchaseOrderFiles = [];
   };
 
-  const fillProducts = (schema: any) => {
+  const fillProducts = (schema: PurchaseOrderSchema) => {
     schema.products = [];
     let totalProductQuantity = 0;
     let totalVariantQuantity = 0;
     const productDict: { [key: string]: any } = {};
 
-    products.forEach(product => {
+    products.forEach((product) => {
+      const productName = product.name;
       const variant = {
         variantColor: product.color,
         variantSize: product.size,
         variantQuantity: product.quantity,
-        variantCost: product.cost.toString(),
-        variantRetail: product.retail.toString(),
+        variantCost: product.cost.toFixed(2),
+        variantRetail: product.retail.toFixed(2),
         variantSku: product.sku,
         variantBarcode: product.barcode,
         variantPreOrder: product.preorder,
@@ -784,11 +842,15 @@ export default function PurchaseOrderImport() {
 
       totalVariantQuantity += variant.variantQuantity;
 
-      if (productDict[product.name]) {
-        productDict[product.name].productVariants.push(variant);
+      const existingProduct = productDict[productName];
+      if (existingProduct) {
+        existingProduct.productVariants.push(variant);
+        if (product.tags.includes("preorder")) {
+          existingProduct.productTags = product.tags;
+        }
       } else {
-        productDict[product.name] = {
-          productName: product.name,
+        const newProduct = {
+          productName: productName,
           productStyleNumber: product.style,
           productSeasonMetafield: product.season,
           productType: product.category,
@@ -797,6 +859,7 @@ export default function PurchaseOrderImport() {
           productReceivedDate: null,
           productVariants: [variant],
         };
+        productDict[productName] = newProduct;
         totalProductQuantity++;
       }
     });
@@ -806,8 +869,8 @@ export default function PurchaseOrderImport() {
     schema.products = Object.values(productDict);
   };
 
-  const fillPurchaseOrderCredits = (schema: any) => {
-    schema.purchaseOrderCredits = credits.map(credit => ({
+  const fillPurchaseOrderCredits = (schema: PurchaseOrderSchema) => {
+    schema.purchaseOrderCredits = credits.map((credit) => ({
       creditDate: credit.date,
       creditDescription: credit.description,
       creditMethod: credit.method,
@@ -815,8 +878,8 @@ export default function PurchaseOrderImport() {
     }));
   };
 
-  const fillPurchaseOrderPayments = (schema: any) => {
-    schema.purchaseOrderPayments = payments.map(payment => ({
+  const fillPurchaseOrderPayments = (schema: PurchaseOrderSchema) => {
+    schema.purchaseOrderPayments = payments.map((payment) => ({
       paymentDate: payment.date,
       paymentDescription: payment.description,
       paymentMethod: payment.method,
@@ -824,14 +887,15 @@ export default function PurchaseOrderImport() {
     }));
   };
 
-  const validateSchema = async (schema: any): Promise<boolean> => {
+  const validateSchema = async (schema: PurchaseOrderSchema): Promise<boolean> => {
     try {
       const token = localStorage.getItem("bridesbyldToken");
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
       const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
 
+      // Check for duplicate orders
       const response = await fetch(
-        `${apiBaseUrl}${basePath}/shopify/checkDuplicateOrder?brand=${schema.brand}&brandPoNumber=${schema.brandPoNumber}`,
+        `${apiBaseUrl}${basePath}/shopify/checkDuplicateOrder?brand=${encodeURIComponent(schema.brand)}&brandPoNumber=${encodeURIComponent(schema.brandPoNumber)}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -850,7 +914,7 @@ export default function PurchaseOrderImport() {
         return false;
       }
     } catch (error) {
-      console.error(error);
+      console.error("Error checking for duplicate orders:", error);
       setError("There was an error checking for duplicate orders. Please try again later.");
       return false;
     }
@@ -871,8 +935,13 @@ export default function PurchaseOrderImport() {
       return false;
     }
 
+    if (!schema.purchaseOrderBalanceDue) {
+      setError("Purchase Order Balance Due is empty or null");
+      return false;
+    }
+
     // Validate products
-    for (let product of schema.products) {
+    for (const product of schema.products) {
       if (!product.productName) {
         setError("Product name is empty or null for a product");
         return false;
@@ -893,7 +962,8 @@ export default function PurchaseOrderImport() {
         return false;
       }
 
-      for (let variant of product.productVariants) {
+      // Validate variants
+      for (const variant of product.productVariants) {
         if (!variant.variantColor) {
           setError("Variant color is empty or null for a product variant");
           return false;
@@ -939,13 +1009,12 @@ export default function PurchaseOrderImport() {
     return true;
   };
 
-  const sendPurchaseOrder = async (schema: any) => {
-    console.log("sending purchase order");
-    try {
-      const token = localStorage.getItem("bridesbyldToken");
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+  const sendPurchaseOrder = async (schema: PurchaseOrderSchema) => {
+    const token = localStorage.getItem("bridesbyldToken");
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+    const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
 
+    try {
       const response = await fetch(`${apiBaseUrl}${basePath}/shopify/saveDraftPurchaseorder`, {
         method: "POST",
         headers: {
@@ -960,53 +1029,83 @@ export default function PurchaseOrderImport() {
       }
 
       const data = await response.json();
-      console.log(data);
       return data;
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error sending purchase order:", error);
       throw error;
     }
   };
 
   const createPurchaseOrder = async () => {
-    let schema: any = {};
-
-    fillBasicDetails(schema);
-    fillProducts(schema);
-    fillPurchaseOrderCredits(schema);
-    fillPurchaseOrderPayments(schema);
-
-    // Debug: Log the complete schema
-    console.log("Purchase Order Schema:", JSON.stringify(schema, null, 2));
-
-    if (!(await validateSchema(schema))) {
-      return;
-    }
-
-    try {
-      await sendPurchaseOrder(schema);
-      setIsSubmitted(true);
-      setServerMessages(prev => [
-        ...prev,
-        { message: "Draft Purchase order submitted successfully", isError: false }
-      ]);
-    } catch (error) {
-      console.error("Error:", error);
-      setError("OOPS, we ran into a snag, this purchase order was not submitted successfully");
-    }
-  };
-
-  const handleSave = async () => {
     setIsLoading(true);
     setError("");
+    setSubmitSuccess(false);
+
     try {
-      await createPurchaseOrder();
+      const schema: PurchaseOrderSchema = {
+        purchaseOrderID: 0,
+        purchaseOrderNumber: "",
+        brand: "",
+        draftOrder: true,
+        publishedOrder: false,
+        createdDate: "",
+        startShipDate: "",
+        completedDate: "",
+        brandPoNumber: "",
+        purchaseOrderSeason: "",
+        terms: "",
+        depositPercent: "",
+        onDeliverPercent: "",
+        net30Percent: "",
+        purchaseOrderTotalPayments: "",
+        purchaseOrderTotalCredits: "",
+        purchaseOrderTotalItemsCost: "",
+        purchaseOrderBalanceDue: "",
+        purchaseOrderNotes: "",
+        purchaseOrderCompleteReceive: false,
+        totalVariantReceivedQuantity: 0,
+        purchaseOrdertotalReceivedValue: 0,
+        purchaseOrderFiles: [],
+        totalProductQuantity: 0,
+        totalVariantQuantity: 0,
+        products: [],
+        purchaseOrderCredits: [],
+        purchaseOrderPayments: [],
+      };
+
+      fillBasicDetails(schema);
+      fillProducts(schema);
+      fillPurchaseOrderCredits(schema);
+      fillPurchaseOrderPayments(schema);
+
+      // Debug: Log the schema to console
+      console.log("Purchase Order Schema:", JSON.stringify(schema, null, 2));
+
+      // Validate schema
+      if (!(await validateSchema(schema))) {
+        return;
+      }
+
+      // Send to server
+      const result = await sendPurchaseOrder(schema);
+      
+      setSubmitSuccess(true);
+      setSubmitMessage("Draft Purchase order submitted successfully");
+      
+      // Disable further submissions
+      setIsLoading(false);
+      
+    } catch (error) {
+      console.error("Error creating purchase order:", error);
+      setError("OOPS, we ran into a snag, this purchase order was not submitted successfully");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const groupedProducts = getGroupedProducts();
+  const handleSave = async () => {
+    await createPurchaseOrder();
+  };
 
   return (
     <Layout title="New Draft Order" showHeader={true} showFooter={false}>
@@ -1089,6 +1188,16 @@ export default function PurchaseOrderImport() {
           </Card>
         )}
 
+        {/* Success Message */}
+        {submitSuccess && (
+          <Card className="border-green-200 bg-green-50">
+            <div className="flex items-center gap-2 text-green-700">
+              <CheckSquare className="w-5 h-5" />
+              <span>{submitMessage}</span>
+            </div>
+          </Card>
+        )}
+
         {/* Error Display */}
         {error && (
           <Card className="border-red-200 bg-red-50">
@@ -1152,19 +1261,19 @@ export default function PurchaseOrderImport() {
           </div>
         </Card>
 
-        {/* Season & Order Details */}
+        {/* Season Constructor & Order Details */}
         <Card>
           <h3 className="text-lg font-semibold text-slate-900 mb-4">Season & Order Details</h3>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Season Constructor - Left Half */}
             <div className="space-y-4">
-              <h4 className="font-medium text-slate-700">Season Constructor</h4>
-              <div className="grid grid-cols-3 gap-3">
+              <h4 className="text-md font-medium text-slate-800">Season Constructor</h4>
+              <div className="flex gap-2 items-end">
                 <FormField label="Season">
                   <select
                     value={formData.season}
                     onChange={(e) => setFormData({ ...formData, season: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 w-28"
                   >
                     {seasonOptions.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -1174,19 +1283,26 @@ export default function PurchaseOrderImport() {
                   </select>
                 </FormField>
 
-                <FormField label="Brand Season">
-                  <Input
+                <FormField label="Brand">
+                  <select
                     value={formData.brandSeason}
                     onChange={(e) => setFormData({ ...formData, brandSeason: e.target.value })}
-                    placeholder="Optional"
-                  />
+                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 flex-1 min-w-0"
+                  >
+                    <option value="">Select Brand...</option>
+                    {vendors.map((vendor) => (
+                      <option key={vendor} value={vendor}>
+                        {vendor}
+                      </option>
+                    ))}
+                  </select>
                 </FormField>
 
                 <FormField label="Year">
                   <select
                     value={formData.yearSeason}
                     onChange={(e) => setFormData({ ...formData, yearSeason: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 w-20"
                   >
                     {yearOptions.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -1195,18 +1311,29 @@ export default function PurchaseOrderImport() {
                     ))}
                   </select>
                 </FormField>
+
+                <Button size="sm" onClick={applySeason}>
+                  Apply
+                </Button>
+
+                <Button size="sm" variant="danger" onClick={() => {
+                  setFormData({ ...formData, season: "Fall", brandSeason: "", yearSeason: "26" });
+                }}>
+                  Delete
+                </Button>
               </div>
-              
-              <div className="p-3 bg-slate-50 rounded-lg">
-                <span className="text-sm text-slate-600">Generated Season: </span>
-                <span className="font-medium text-slate-900">{generateSeasonString()}</span>
+
+              {/* Season Preview */}
+              <div className="mt-3 p-3 bg-slate-50 rounded-lg">
+                <span className="text-sm text-slate-600">Preview: </span>
+                <span className="font-medium text-slate-900">{constructSeason()}</span>
               </div>
             </div>
 
             {/* Order Details - Right Half */}
             <div className="space-y-4">
-              <h4 className="font-medium text-slate-700">Order Information</h4>
-              <div className="grid grid-cols-2 gap-3">
+              <h4 className="text-md font-medium text-slate-800">Order Information</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField label="Brand PO">
                   <Input
                     value={formData.brandPO}
@@ -1249,7 +1376,7 @@ export default function PurchaseOrderImport() {
         {/* Product Controls */}
         <Card>
           <h3 className="text-lg font-semibold text-slate-900 mb-4">Product Controls</h3>
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <FormField label="Category">
               <div className="flex gap-2">
                 <select
@@ -1314,19 +1441,6 @@ export default function PurchaseOrderImport() {
                 </Button>
               </div>
             </FormField>
-
-            <FormField label="Terms">
-              <select
-                value={formData.terms}
-                onChange={(e) => setFormData({ ...formData, terms: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="100% Before Delivery">100% Before Delivery</option>
-                <option value="50% Deposit, 50% Before Delivery">50% Deposit, 50% Before Delivery</option>
-                <option value="30% Deposit, 70% Before Delivery">30% Deposit, 70% Before Delivery</option>
-                <option value="Net 30">Net 30</option>
-              </select>
-            </FormField>
           </div>
         </Card>
 
@@ -1362,16 +1476,20 @@ export default function PurchaseOrderImport() {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">SKU</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Barcode</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Season</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Category</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">P-Type</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Tags</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Preorder</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Margin</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Total</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">S.S</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">C.S</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">J.S</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">CAT</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {products.map((product) => (
-                    <tr key={product.id} className={getRowColorClass(product.name, groupedProducts)}>
+                  {products.map((product, index) => (
+                    <tr key={product.id} className={getRowClassName(product, index)}>
                       <td className="px-4 py-3">
                         <button
                           onClick={() => handleProductSelect(product.id)}
@@ -1395,9 +1513,7 @@ export default function PurchaseOrderImport() {
                       <td className="px-4 py-3 text-sm text-slate-600 font-mono">{product.barcode}</td>
                       <td className="px-4 py-3 text-sm text-slate-600">{product.season}</td>
                       <td className="px-4 py-3 text-sm text-slate-600">{product.category}</td>
-                      <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate" title={product.tags}>
-                        {product.tags}
-                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-600 max-w-32 truncate" title={product.tags}>{product.tags}</td>
                       <td className="px-4 py-3">
                         <span
                           className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
@@ -1411,6 +1527,10 @@ export default function PurchaseOrderImport() {
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-900">{product.margin.toFixed(1)}%</td>
                       <td className="px-4 py-3 text-sm text-slate-900 font-medium">${product.total.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{product.shoeSize}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{product.clothingSize}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{product.jeansSize}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{product.metaCategory}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1568,11 +1688,11 @@ export default function PurchaseOrderImport() {
             size="lg"
             onClick={handleSave}
             isLoading={isLoading}
-            disabled={isSubmitted}
+            disabled={submitSuccess}
             className="flex items-center gap-2 mx-auto"
           >
             <Save className="w-5 h-5" />
-            {isSubmitted ? "Order Submitted" : "Save Draft Order"}
+            {submitSuccess ? "Order Submitted Successfully" : "Save Draft Order"}
           </Button>
         </Card>
       </div>
