@@ -1,29 +1,30 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Loader2, ShoppingBag } from 'lucide-react';
+import React, { useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { Mail, Lock, Eye, EyeOff, Loader2, ShoppingBag } from "lucide-react";
 
 // Import all pages
-import PurchaseOrderImport from './pages/PurchaseOrderImport';
-import Dashboard from './pages/Dashboard';
-import DraftOrders from './pages/DraftOrders';
-import DraftOrderDetail from './pages/DraftOrderDetail';
-import PublishedOrders from './pages/PublishedOrders';
-import Reorder from './pages/Reorder';
-import LateOrders from './pages/LateOrders';
-import Vendors from './pages/Vendors';
-import Reminders from './pages/Reminders';
-import Seasons from './pages/Seasons';
-import Counts from './pages/Counts';
-import NewArrivals from './pages/NewArrivals';
-import NewReturn from './pages/NewReturn';
-import ReturnList from './pages/ReturnList';
-import ExcelImport from './pages/ExcelImport';
-import SingleItem from './pages/SingleItem';
-import BulkDiscount from './pages/BulkDiscount';
-import BulkDiscountReverse from './pages/BulkDiscountReverse';
-import SellThroughImport from './pages/SellThroughImport';
-import SellThroughData from './pages/SellThroughData';
-import Pictures from './pages/Pictures';
+import PurchaseOrderImport from "./pages/PurchaseOrderImport";
+import Dashboard from "./pages/Dashboard";
+import DraftOrders from "./pages/DraftOrders";
+import DraftOrderDetail from "./pages/DraftOrderDetail";
+import PublishedOrders from "./pages/PublishedOrders";
+import PublishedOrderDetail from "./pages/PublishedOrderDetail";
+import Reorder from "./pages/Reorder";
+import LateOrders from "./pages/LateOrders";
+import Vendors from "./pages/Vendors";
+import Reminders from "./pages/Reminders";
+import Seasons from "./pages/Seasons";
+import Counts from "./pages/Counts";
+import NewArrivals from "./pages/NewArrivals";
+import NewReturn from "./pages/NewReturn";
+import ReturnList from "./pages/ReturnList";
+import ExcelImport from "./pages/ExcelImport";
+import SingleItem from "./pages/SingleItem";
+import BulkDiscount from "./pages/BulkDiscount";
+import BulkDiscountReverse from "./pages/BulkDiscountReverse";
+import SellThroughImport from "./pages/SellThroughImport";
+import SellThroughData from "./pages/SellThroughData";
+import Pictures from "./pages/Pictures";
 
 interface LoginResponse {
   registered: boolean;
@@ -32,12 +33,12 @@ interface LoginResponse {
 
 function LoginPage() {
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: "",
+    password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isValidEmail, setIsValidEmail] = useState(true);
 
   const validateEmail = (email: string) => {
@@ -47,48 +48,48 @@ function LoginPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
-    
+
     // Real-time email validation
-    if (name === 'email') {
-      setIsValidEmail(value === '' || validateEmail(value));
+    if (name === "email") {
+      setIsValidEmail(value === "" || validateEmail(value));
     }
-    
+
     // Clear error when user starts typing
-    if (error) setError('');
+    if (error) setError("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate form
     if (!formData.email || !formData.password) {
-      setError('Please fill in all fields');
+      setError("Please fill in all fields");
       return;
     }
-    
+
     if (!validateEmail(formData.email)) {
-      setError('Please enter a valid email address');
+      setError("Please enter a valid email address");
       setIsValidEmail(false);
       return;
     }
 
     setIsLoading(true);
-    setError('');
+    setError("");
 
     try {
       // Construct API URL based on environment
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
       const loginUrl = `${apiBaseUrl}${basePath}/shopify/login`;
 
       const response = await fetch(loginUrl, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           email: formData.email,
@@ -97,7 +98,7 @@ function LoginPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Invalid email or password');
+        throw new Error("Invalid email or password");
       }
 
       const data: LoginResponse = await response.json();
@@ -106,13 +107,13 @@ function LoginPage() {
         window.location.href = `${basePath}/orders/register.html`;
       } else {
         if (data.token) {
-          localStorage.setItem('bridesbyldToken', data.token);
+          localStorage.setItem("bridesbyldToken", data.token);
         }
         // Navigate to dashboard instead of purchase order page
         window.location.href = `${basePath}/shopifyreact/dashboard`;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred during login');
+      setError(err instanceof Error ? err.message : "An error occurred during login");
     } finally {
       setIsLoading(false);
     }
@@ -137,7 +138,7 @@ function LoginPage() {
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">Lola Dré</h1>
             <p className="text-white/70 text-sm font-medium">
-              {import.meta.env.VITE_APP_TITLE || 'Order Management System'}
+              {import.meta.env.VITE_APP_TITLE || "Order Management System"}
             </p>
             {import.meta.env.VITE_ENVIRONMENT && (
               <p className="text-white/50 text-xs mt-1 uppercase tracking-wide">
@@ -162,9 +163,11 @@ function LoginPage() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail className={`w-5 h-5 transition-colors duration-200 ${
-                    isValidEmail ? 'text-white/50' : 'text-red-400'
-                  }`} />
+                  <Mail
+                    className={`w-5 h-5 transition-colors duration-200 ${
+                      isValidEmail ? "text-white/50" : "text-red-400"
+                    }`}
+                  />
                 </div>
                 <input
                   type="email"
@@ -173,9 +176,9 @@ function LoginPage() {
                   value={formData.email}
                   onChange={handleInputChange}
                   className={`w-full pl-12 pr-4 py-4 bg-white/10 border rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 transition-all duration-200 backdrop-blur-sm ${
-                    isValidEmail 
-                      ? 'border-white/20 focus:ring-purple-500 focus:border-transparent' 
-                      : 'border-red-500/50 focus:ring-red-500'
+                    isValidEmail
+                      ? "border-white/20 focus:ring-purple-500 focus:border-transparent"
+                      : "border-red-500/50 focus:ring-red-500"
                   }`}
                   placeholder="Enter your email"
                   required
@@ -193,7 +196,7 @@ function LoginPage() {
                   <Lock className="w-5 h-5 text-white/50" />
                 </div>
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   id="password"
                   name="password"
                   value={formData.password}
@@ -224,16 +227,14 @@ function LoginPage() {
                   Signing In...
                 </>
               ) : (
-                'Sign In'
+                "Sign In"
               )}
             </button>
           </form>
 
           {/* Footer */}
           <div className="mt-8 text-center">
-            <p className="text-white/60 text-sm">
-              Secure login powered by Shopify
-            </p>
+            <p className="text-white/60 text-sm">Secure login powered by Shopify</p>
           </div>
         </div>
 
@@ -250,12 +251,12 @@ function LoginPage() {
 
 // Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const token = localStorage.getItem('bridesbyldToken');
-  
+  const token = localStorage.getItem("bridesbyldToken");
+
   if (!token) {
     return <Navigate to="/" replace />;
   }
-  
+
   return <>{children}</>;
 }
 
@@ -266,205 +267,213 @@ function App() {
         <Route path="/" element={<LoginPage />} />
         <Route path="/shopifyreact" element={<Navigate to="/dashboard" replace />} />
         <Route path="/shopifyreact/" element={<Navigate to="/dashboard" replace />} />
-        
+
         {/* Protected Routes */}
-        <Route 
-          path="/dashboard" 
+        <Route
+          path="/dashboard"
           element={
             <ProtectedRoute>
               <Dashboard />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/shopifyreact/dashboard" 
+        <Route
+          path="/shopifyreact/dashboard"
           element={
             <ProtectedRoute>
               <Dashboard />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/purchase-order" 
+        <Route
+          path="/purchase-order"
           element={
             <ProtectedRoute>
               <PurchaseOrderImport />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/shopifyreact/purchase-order" 
+        <Route
+          path="/shopifyreact/purchase-order"
           element={
             <ProtectedRoute>
               <PurchaseOrderImport />
             </ProtectedRoute>
-          } 
+          }
         />
-        
+
         {/* Orders Routes */}
-        <Route 
-          path="/draft-orders" 
+        <Route
+          path="/draft-orders"
           element={
             <ProtectedRoute>
               <DraftOrders />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/draft-order-detail" 
+        <Route
+          path="/draft-order-detail"
           element={
             <ProtectedRoute>
               <DraftOrderDetail />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/published-orders" 
+        <Route
+          path="/published-orders"
           element={
             <ProtectedRoute>
               <PublishedOrders />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/reorder" 
+        <Route
+          path="/published-order-detail"
+          element={
+            <ProtectedRoute>
+              <PublishedOrderDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reorder"
           element={
             <ProtectedRoute>
               <Reorder />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/late-orders" 
+        <Route
+          path="/late-orders"
           element={
             <ProtectedRoute>
               <LateOrders />
             </ProtectedRoute>
-          } 
+          }
         />
-        
+
         {/* Accounting Routes */}
-        <Route 
-          path="/vendors" 
+        <Route
+          path="/vendors"
           element={
             <ProtectedRoute>
               <Vendors />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/reminders" 
+        <Route
+          path="/reminders"
           element={
             <ProtectedRoute>
               <Reminders />
             </ProtectedRoute>
-          } 
+          }
         />
-        
+
         {/* Products Routes */}
-        <Route 
-          path="/seasons" 
+        <Route
+          path="/seasons"
           element={
             <ProtectedRoute>
               <Seasons />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/counts" 
+        <Route
+          path="/counts"
           element={
             <ProtectedRoute>
               <Counts />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/new-arrivals" 
+        <Route
+          path="/new-arrivals"
           element={
             <ProtectedRoute>
               <NewArrivals />
             </ProtectedRoute>
-          } 
+          }
         />
-        
+
         {/* Returns Routes */}
-        <Route 
-          path="/new-return" 
+        <Route
+          path="/new-return"
           element={
             <ProtectedRoute>
               <NewReturn />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/return-list" 
+        <Route
+          path="/return-list"
           element={
             <ProtectedRoute>
               <ReturnList />
             </ProtectedRoute>
-          } 
+          }
         />
-        
+
         {/* Price2Spy Routes */}
-        <Route 
-          path="/excel-import" 
+        <Route
+          path="/excel-import"
           element={
             <ProtectedRoute>
               <ExcelImport />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/single-item" 
+        <Route
+          path="/single-item"
           element={
             <ProtectedRoute>
               <SingleItem />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/bulk-discount" 
+        <Route
+          path="/bulk-discount"
           element={
             <ProtectedRoute>
               <BulkDiscount />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/bulk-discount-reverse" 
+        <Route
+          path="/bulk-discount-reverse"
           element={
             <ProtectedRoute>
               <BulkDiscountReverse />
             </ProtectedRoute>
-          } 
+          }
         />
-        
+
         {/* Sell Through Routes */}
-        <Route 
-          path="/sell-through-import" 
+        <Route
+          path="/sell-through-import"
           element={
             <ProtectedRoute>
               <SellThroughImport />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/sell-through-data" 
+        <Route
+          path="/sell-through-data"
           element={
             <ProtectedRoute>
               <SellThroughData />
             </ProtectedRoute>
-          } 
+          }
         />
-        
+
         {/* Pictures Route */}
-        <Route 
-          path="/pictures" 
+        <Route
+          path="/pictures"
           element={
             <ProtectedRoute>
               <Pictures />
             </ProtectedRoute>
-          } 
+          }
         />
       </Routes>
     </Router>
