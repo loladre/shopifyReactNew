@@ -27,7 +27,9 @@ import {
   RefreshCw,
   Activity,
   Target,
-  Zap
+  Zap,
+  Plus,
+  Percent
 } from 'lucide-react';
 
 interface PaymentReminder {
@@ -916,8 +918,8 @@ export default function Dashboard() {
                     </div>
                   </button>
                 </div>
-              </Card>
-            </div>
+              </div>
+            </Card>
 
             {/* Recent Activity */}
             <Card>
@@ -944,8 +946,8 @@ export default function Dashboard() {
                     <span className="text-sm text-slate-500">2 days ago</span>
                   </div>
                 </div>
-              </Card>
-            </div>
+              </div>
+            </Card>
 
             {/* Performance Overview */}
             <Card>
@@ -968,8 +970,8 @@ export default function Dashboard() {
                     <div className="text-sm text-slate-600">Late Orders</div>
                   </div>
                 </div>
-              </Card>
-            </div>
+              </div>
+            </Card>
           </div>
 
           {/* Server Messages Panel */}
