@@ -18,6 +18,7 @@ import Counts from "./pages/Counts";
 import NewArrivals from "./pages/NewArrivals";
 import NewReturn from "./pages/NewReturn";
 import ReturnList from "./pages/ReturnList";
+import Returns from "./pages/Returns";
 import ExcelImport from "./pages/ExcelImport";
 import SingleItem from "./pages/SingleItem";
 import BulkDiscount from "./pages/BulkDiscount";
@@ -410,6 +411,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ReturnList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/returns"
+          element={
+            <ProtectedRoute>
+              <Returns />
             </ProtectedRoute>
           }
         />

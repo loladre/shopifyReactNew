@@ -141,6 +141,9 @@ export default function Header() {
                   <Link to="/return-list" className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-purple-600 transition-colors duration-200" onClick={closeAllDropdowns}>
                     Return List
                   </Link>
+                  <Link to="/returns" className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-purple-600 transition-colors duration-200" onClick={closeAllDropdowns}>
+                    Returns Analysis
+                  </Link>
                 </div>
               )}
             </div>
@@ -284,6 +287,19 @@ export default function Header() {
                 </Link>
                 <Link to="/late-orders" className="text-slate-700 hover:text-purple-600 py-2 px-6 block hover:bg-slate-50 rounded-lg transition-colors duration-200">
                   Late Orders
+                </Link>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-slate-600 font-medium py-2 px-3 text-sm uppercase tracking-wide">Returns</div>
+                <Link to="/new-return" className="text-slate-700 hover:text-purple-600 py-2 px-6 block hover:bg-slate-50 rounded-lg transition-colors duration-200">
+                  New Return
+                </Link>
+                <Link to="/return-list" className="text-slate-700 hover:text-purple-600 py-2 px-6 block hover:bg-slate-50 rounded-lg transition-colors duration-200">
+                  Return List
+                </Link>
+                <Link to="/returns" className="text-slate-700 hover:text-purple-600 py-2 px-6 block hover:bg-slate-50 rounded-lg transition-colors duration-200">
+                  Returns Analysis
                 </Link>
               </div>
 
