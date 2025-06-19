@@ -6,6 +6,7 @@ import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import FormField from "../components/ui/FormField";
 import ServerMessagePanel from "../components/ui/ServerMessagePanel";
+import { selectMapping } from "../utils/sizeConversions";
 import {
   FileText,
   Building2,
@@ -119,14 +120,17 @@ export default function EditPublishedOrder() {
   const [credits, setCredits] = useState<Credit[]>([]);
   const [files, setFiles] = useState<OrderFile[]>([]);
   const [vendors, setVendors] = useState<string[]>([]);
+  const [productTypes, setProductTypes] = useState<string[]>([]);
 
   // Edit states
   const [isEditingSeason, setIsEditingSeason] = useState(false);
   const [isEditingCancelDate, setIsEditingCancelDate] = useState(false);
+  const [isEditingStartShip, setIsEditingStartShip] = useState(false);
   const [newSeason, setNewSeason] = useState("");
   const [newBrandSeason, setNewBrandSeason] = useState("");
   const [newYearSeason, setNewYearSeason] = useState("26");
   const [newCancelDate, setNewCancelDate] = useState("");
+  const [newStartShipDate, setNewStartShipDate] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
   const [receiveComplete, setReceiveComplete] = useState(false);
 
@@ -150,6 +154,7 @@ export default function EditPublishedOrder() {
     if (orderId) {
       fetchOrderDetail(orderId);
       fetchVendors();
+      fetchProductTypes();
     } else {
       setError("No order ID provided");
       setIsLoading(false);
@@ -201,6 +206,7 @@ export default function EditPublishedOrder() {
       setReceiveComplete(data.purchaseOrderCompleteReceive);
       setAdditionalNotes(data.purchaseOrderNotes);
       setNewCancelDate(data.completedDate);
+      setNewStartShipDate(data.startShipDate);
 
       // Parse season for editing
       const seasonParts = parseSeason(data.purchaseOrderSeason);
@@ -235,6 +241,30 @@ export default function EditPublishedOrder() {
       setVendors(data.sort());
     } catch (err) {
       console.error("Failed to fetch vendors:", err);
+    }
+  };
+
+  const fetchProductTypes = async () => {
+    try {
+      const token = localStorage.getItem("bridesbyldToken");
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
+      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/productTypes`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch product types");
+      }
+
+      const data: string[] = await response.json();
+      setProductTypes(data.sort());
+    } catch (err) {
+      console.error("Failed to fetch product types:", err);
     }
   };
 
@@ -277,6 +307,124 @@ export default function EditPublishedOrder() {
     return `${newSeason}${newYearSeason}`;
   };
 
+  const formatDateForTags = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "numeric",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const generatePreorderTag = (startShipDate: string): string => {
+    const formattedDate = formatDateForTags(startShipDate);
+    return `preorder,Message2:282727:Ships by ${formattedDate}`;
+  };
+
+  const updateTagsForSeason = (newSeasonValue: string) => {
+    const updatedProducts = products.map((product) => ({
+      ...product,
+      productVariants: product.productVariants.map((variant) => {
+        let newTags = newSeasonValue;
+        
+        // If preorder is true, add preorder tag
+        if (variant.variantPreOrder) {
+          newTags += `,${generatePreorderTag(newStartShipDate)}`;
+        }
+        
+        return {
+          ...variant,
+          updateVariantFlag: true,
+        };
+      }),
+      productTags: (() => {
+        let newTags = newSeasonValue;
+        
+        // Check if any variant in this product has preorder true
+        const hasPreorder = product.productVariants.some(v => v.variantPreOrder);
+        if (hasPreorder) {
+          newTags += `,${generatePreorderTag(newStartShipDate)}`;
+        }
+        
+        return newTags;
+      })(),
+      updateProductFlag: true,
+    }));
+    
+    setProducts(updatedProducts);
+  };
+
+  const updateTagsForPreorder = (productIndex: number, variantIndex: number, isPreorder: boolean) => {
+    const updatedProducts = [...products];
+    const product = updatedProducts[productIndex];
+    const currentSeason = order?.purchaseOrderSeason || constructSeason();
+    
+    // Update all variants of the same product
+    product.productVariants.forEach((variant, vIndex) => {
+      if (vIndex === variantIndex) {
+        // Update the specific variant
+        variant.variantPreOrder = isPreorder;
+      }
+      
+      let newTags = currentSeason;
+      
+      // Check if this variant should have preorder tag
+      const shouldHavePreorder = vIndex === variantIndex ? isPreorder : variant.variantPreOrder;
+      if (shouldHavePreorder) {
+        newTags += `,${generatePreorderTag(newStartShipDate)}`;
+      }
+      
+      variant.updateVariantFlag = true;
+    });
+    
+    // Update product tags based on whether any variant has preorder
+    const hasAnyPreorder = product.productVariants.some(v => v.variantPreOrder);
+    let productTags = currentSeason;
+    if (hasAnyPreorder) {
+      productTags += `,${generatePreorderTag(newStartShipDate)}`;
+    }
+    
+    product.productTags = productTags;
+    product.updateProductFlag = true;
+    
+    setProducts(updatedProducts);
+  };
+
+  const updateTagsForStartShipDate = (newStartShip: string) => {
+    const updatedProducts = products.map((product) => ({
+      ...product,
+      productVariants: product.productVariants.map((variant) => {
+        const currentSeason = order?.purchaseOrderSeason || constructSeason();
+        let newTags = currentSeason;
+        
+        // If preorder is true, add updated preorder tag with new date
+        if (variant.variantPreOrder) {
+          newTags += `,${generatePreorderTag(newStartShip)}`;
+        }
+        
+        return {
+          ...variant,
+          updateVariantFlag: true,
+        };
+      }),
+      productTags: (() => {
+        const currentSeason = order?.purchaseOrderSeason || constructSeason();
+        let newTags = currentSeason;
+        
+        // Check if any variant in this product has preorder true
+        const hasPreorder = product.productVariants.some(v => v.variantPreOrder);
+        if (hasPreorder) {
+          newTags += `,${generatePreorderTag(newStartShip)}`;
+        }
+        
+        return newTags;
+      })(),
+      updateProductFlag: true,
+    }));
+    
+    setProducts(updatedProducts);
+  };
+
   const handleSaveSeason = async () => {
     if (!order) return;
 
@@ -311,6 +459,9 @@ export default function EditPublishedOrder() {
         ...order,
         purchaseOrderSeason: updatedSeason,
       });
+
+      // Update all tags with new season
+      updateTagsForSeason(updatedSeason);
 
       setIsEditingSeason(false);
       setSuccess("Season updated successfully");
@@ -354,6 +505,47 @@ export default function EditPublishedOrder() {
       setSuccess("Cancel date updated successfully");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update cancel date");
+    }
+  };
+
+  const handleSaveStartShipDate = async () => {
+    if (!order) return;
+
+    try {
+      const token = localStorage.getItem("bridesbyldToken");
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
+      const response = await fetch(
+        `${apiBaseUrl}${basePath}/shopify/updateStartShipDate/${order.purchaseOrderID}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            startShipDate: newStartShipDate,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update start ship date");
+      }
+
+      setOrder({
+        ...order,
+        startShipDate: newStartShipDate,
+      });
+
+      // Update all tags with new start ship date
+      updateTagsForStartShipDate(newStartShipDate);
+
+      setIsEditingStartShip(false);
+      setSuccess("Start ship date updated successfully");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update start ship date");
     }
   };
 
@@ -437,7 +629,6 @@ export default function EditPublishedOrder() {
     setSelectAll(allSelected);
   };
 
-  // Enhanced product change handler with synchronized pricing
   const handleProductChange = (
     productIndex: number,
     variantIndex: number,
@@ -446,42 +637,65 @@ export default function EditPublishedOrder() {
   ) => {
     const updatedProducts = [...products];
 
-    if (field === "productType" || field === "productTags" || field === "productCanceled") {
+    if (field === "productType") {
+      // Update product type and automatically update CAT for all variants
+      const newProductType = value;
+      const newCategory = selectMapping[newProductType] || "";
+      
+      updatedProducts[productIndex] = {
+        ...updatedProducts[productIndex],
+        productType: newProductType,
+        updateProductFlag: true,
+        productVariants: updatedProducts[productIndex].productVariants.map(variant => ({
+          ...variant,
+          variantMetafieldCategory: newCategory,
+          updateVariantFlag: true,
+        }))
+      };
+    } else if (field === "productTags" || field === "productCanceled") {
       // These are product-level fields
       updatedProducts[productIndex] = {
         ...updatedProducts[productIndex],
         [field]: value,
         updateProductFlag: true,
       };
+    } else if (field === "variantPreOrder") {
+      // Handle preorder change with tag updates
+      updateTagsForPreorder(productIndex, variantIndex, value);
+      return; // Early return since updateTagsForPreorder handles the state update
+    } else if (field === "variantRetail") {
+      // Update retail price for all variants with the same product name
+      const currentProductName = updatedProducts[productIndex].productName;
+      
+      updatedProducts.forEach((product) => {
+        if (product.productName === currentProductName) {
+          product.productVariants.forEach((variant) => {
+            variant.variantRetail = value;
+            variant.updateVariantFlag = true;
+          });
+          product.updateProductFlag = true;
+        }
+      });
+    } else if (field === "variantCost") {
+      // Update cost for all variants with the same product name
+      const currentProductName = updatedProducts[productIndex].productName;
+      
+      updatedProducts.forEach((product) => {
+        if (product.productName === currentProductName) {
+          product.productVariants.forEach((variant) => {
+            variant.variantCost = value;
+            variant.updateVariantFlag = true;
+          });
+          product.updateProductFlag = true;
+        }
+      });
     } else {
       // These are variant-level fields
-      const currentProduct = updatedProducts[productIndex];
-      const currentVariant = currentProduct.productVariants[variantIndex];
-      
-      // Update the current variant
       updatedProducts[productIndex].productVariants[variantIndex] = {
-        ...currentVariant,
+        ...updatedProducts[productIndex].productVariants[variantIndex],
         [field]: value,
         updateVariantFlag: true,
       };
-
-      // If changing retail price or cost, update all variants with the same product name
-      if (field === "variantRetail" || field === "variantCost") {
-        const currentProductName = currentProduct.productName;
-        
-        updatedProducts.forEach((product, pIndex) => {
-          if (product.productName === currentProductName) {
-            product.productVariants.forEach((variant, vIndex) => {
-              updatedProducts[pIndex].productVariants[vIndex] = {
-                ...variant,
-                [field]: value,
-                updateVariantFlag: true,
-              };
-            });
-            updatedProducts[pIndex].updateProductFlag = true;
-          }
-        });
-      }
     }
 
     setProducts(updatedProducts);
@@ -853,7 +1067,35 @@ export default function EditPublishedOrder() {
                     <Calendar className="w-5 h-5 text-slate-400" />
                     <span className="font-semibold text-slate-900">Start Ship:</span>
                     <span className="text-slate-700">{formatDate(order.startShipDate)}</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setIsEditingStartShip(!isEditingStartShip)}
+                    >
+                      <Edit className="w-3 h-3" />
+                    </Button>
                   </div>
+                  {isEditingStartShip && (
+                    <div className="space-y-2">
+                      <Input
+                        type="date"
+                        value={newStartShipDate}
+                        onChange={(e) => setNewStartShipDate(e.target.value)}
+                      />
+                      <div className="flex space-x-2">
+                        <Button size="sm" onClick={handleSaveStartShipDate}>
+                          Save
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setIsEditingStartShip(false)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                   <div className="space-y-1">
                     <span className="font-semibold text-slate-900">Payment Terms:</span>
                     <p className="text-sm text-slate-700">
@@ -1049,7 +1291,7 @@ export default function EditPublishedOrder() {
                                   e.target.value
                                 )
                               }
-                              className="w-20 text-sm py-1 px-2"
+                              className="w-16 text-sm"
                             />
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-900 font-medium">
@@ -1065,7 +1307,7 @@ export default function EditPublishedOrder() {
                                   parseInt(e.target.value) || 0
                                 )
                               }
-                              className="w-20 text-sm py-1 px-2"
+                              className="w-16 text-sm"
                             />
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-900">
@@ -1081,7 +1323,7 @@ export default function EditPublishedOrder() {
                                   parseFloat(e.target.value) || 0
                                 )
                               }
-                              className="w-24 text-sm py-1 px-2"
+                              className="w-20 text-sm"
                             />
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-900">
@@ -1097,15 +1339,14 @@ export default function EditPublishedOrder() {
                                   parseFloat(e.target.value) || 0
                                 )
                               }
-                              className="w-24 text-sm py-1 px-2"
+                              className="w-20 text-sm"
                             />
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-600 font-mono">
                             {variant.variantSku}
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-600">
-                            <Input
-                              type="text"
+                            <select
                               value={product.productType}
                               onChange={(e) =>
                                 handleProductChange(
@@ -1115,23 +1356,20 @@ export default function EditPublishedOrder() {
                                   e.target.value
                                 )
                               }
-                              className="w-32 text-sm py-1 px-2"
-                            />
+                              className="px-2 py-1 border border-slate-300 rounded text-sm w-32"
+                            >
+                              <option value="">Select Type...</option>
+                              {productTypes.map((type) => (
+                                <option key={type} value={type}>
+                                  {type}
+                                </option>
+                              ))}
+                            </select>
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-600">
-                            <Input
-                              type="text"
-                              value={product.productTags}
-                              onChange={(e) =>
-                                handleProductChange(
-                                  productIndex,
-                                  variantIndex,
-                                  "productTags",
-                                  e.target.value
-                                )
-                              }
-                              className="w-32 text-sm py-1 px-2"
-                            />
+                            <span className="text-xs bg-slate-100 px-2 py-1 rounded">
+                              {product.productTags}
+                            </span>
                           </td>
                           <td className="px-4 py-3">
                             <select
@@ -1184,19 +1422,9 @@ export default function EditPublishedOrder() {
                             {formatCurrency(variant.variantCost * variant.variantQuantity)}
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-600">
-                            <Input
-                              type="text"
-                              value={variant.variantMetafieldCategory}
-                              onChange={(e) =>
-                                handleProductChange(
-                                  productIndex,
-                                  variantIndex,
-                                  "variantMetafieldCategory",
-                                  e.target.value
-                                )
-                              }
-                              className="w-24 text-sm py-1 px-2"
-                            />
+                            <span className="text-xs bg-slate-100 px-2 py-1 rounded">
+                              {variant.variantMetafieldCategory}
+                            </span>
                           </td>
                         </tr>
                       ));
