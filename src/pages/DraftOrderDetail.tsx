@@ -1,23 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import Layout from '../components/Layout';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import ProductTable, { ProductTableColumn, Product } from '../components/ui/ProductTable';
-import PaymentTable, { Payment, Credit } from '../components/ui/PaymentTable';
-import ServerMessagePanel from '../components/ui/ServerMessagePanel';
-import { 
-  FileText, 
-  Building2, 
-  Calendar, 
-  DollarSign, 
+import React, { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import Layout from "../components/Layout";
+import Card from "../components/ui/Card";
+import Button from "../components/ui/Button";
+import ProductTable, { ProductTableColumn, Product } from "../components/ui/ProductTable";
+import PaymentTable, { Payment, Credit } from "../components/ui/PaymentTable";
+import ServerMessagePanel from "../components/ui/ServerMessagePanel";
+import {
+  FileText,
+  Building2,
+  Calendar,
+  DollarSign,
   Package,
   AlertTriangle,
   CheckCircle,
   Trash2,
   Send,
-  StickyNote
-} from 'lucide-react';
+  StickyNote,
+} from "lucide-react";
 
 interface DraftOrderDetail {
   purchaseOrderID: string;
@@ -44,11 +44,11 @@ interface DraftOrderDetail {
 export default function DraftOrderDetail() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const orderId = searchParams.get('orderId');
-  
+  const orderId = searchParams.get("orderId");
+
   const [order, setOrder] = useState<DraftOrderDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
 
@@ -56,7 +56,7 @@ export default function DraftOrderDetail() {
     if (orderId) {
       fetchOrderDetail(orderId);
     } else {
-      setError('No order ID provided');
+      setError("No order ID provided");
       setIsLoading(false);
     }
   }, [orderId]);
@@ -64,103 +64,114 @@ export default function DraftOrderDetail() {
   const fetchOrderDetail = async (purchaseOrderId: string) => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('bridesbyldToken');
-      
+      const token = localStorage.getItem("bridesbyldToken");
+
       if (!token) {
-        navigate('/');
+        navigate("/");
         return;
       }
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-      
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/getDraftOrderById/${purchaseOrderId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
+      const response = await fetch(
+        `${apiBaseUrl}${basePath}/shopify/getDraftOrderById/${purchaseOrderId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (!response.ok) {
         if (response.status === 404) {
-          setError('Purchase order not found');
+          setError("Purchase order not found");
         } else {
-          throw new Error('Failed to fetch order details');
+          throw new Error("Failed to fetch order details");
         }
         return;
       }
 
       const data: DraftOrderDetail = await response.json();
       setOrder(data);
-      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDeleteOrder = async () => {
-    if (!order || !window.confirm('Are you sure you want to delete this order?')) {
+    if (!order || !window.confirm("Are you sure you want to delete this order?")) {
       return;
     }
 
     try {
       setIsDeleting(true);
-      const token = localStorage.getItem('bridesbyldToken');
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-      
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/deleteDraftPurchaseOrderById/${order.purchaseOrderID}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const token = localStorage.getItem("bridesbyldToken");
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
+      const response = await fetch(
+        `${apiBaseUrl}${basePath}/shopify/deleteDraftPurchaseOrderById/${order.purchaseOrderID}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (!response.ok) {
-        throw new Error('Failed to delete order');
+        throw new Error("Failed to delete order");
       }
 
       // Navigate back to draft orders list
-      navigate('/draft-orders');
-      
+      navigate("/draft-orders");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete order');
+      setError(err instanceof Error ? err.message : "Failed to delete order");
     } finally {
       setIsDeleting(false);
     }
   };
 
   const handlePublishOrder = async () => {
-    if (!order || !window.confirm('Are you sure you want to publish this order? This will create the items on Shopify.')) {
+    if (
+      !order ||
+      !window.confirm(
+        "Are you sure you want to publish this order? This will create the items on Shopify."
+      )
+    ) {
       return;
     }
 
     try {
       setIsPublishing(true);
-      const token = localStorage.getItem('bridesbyldToken');
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-      
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/publishDraftOrderById/${order.purchaseOrderID}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const token = localStorage.getItem("bridesbyldToken");
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
+      const response = await fetch(
+        `${apiBaseUrl}${basePath}/shopify/publishDraftOrderById/${order.purchaseOrderID}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (!response.ok) {
-        throw new Error('Failed to publish order');
+        throw new Error("Failed to publish order");
       }
 
       // Navigate back to draft orders list
-      navigate('/draft-orders');
-      
+      navigate("/draft-orders");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to publish order');
+      setError(err instanceof Error ? err.message : "Failed to publish order");
     } finally {
       setIsPublishing(false);
     }
@@ -168,24 +179,24 @@ export default function DraftOrderDetail() {
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric'
+    return date.toLocaleDateString("en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      year: "numeric",
     });
   };
 
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 2,
     }).format(amount);
   };
 
   const formatPercentage = (value: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'percent',
+    return new Intl.NumberFormat("en-US", {
+      style: "percent",
       minimumFractionDigits: 2,
     }).format(value / 100);
   };
@@ -193,75 +204,73 @@ export default function DraftOrderDetail() {
   // Product table columns
   const productColumns: ProductTableColumn[] = [
     {
-      key: 'product.productName',
-      header: 'Name',
+      key: "product.productName",
+      header: "Name",
       sortable: true,
-      render: (value) => <span className="font-medium">{value}</span>
+      render: (value) => <span className="font-medium">{value}</span>,
     },
     {
-      key: 'variantColor',
-      header: 'Color',
-      sortable: true,
-    },
-    {
-      key: 'variantSize',
-      header: 'Size',
+      key: "variantColor",
+      header: "Color",
       sortable: true,
     },
     {
-      key: 'variantQuantity',
-      header: 'QTY',
+      key: "variantSize",
+      header: "Size",
       sortable: true,
-      className: 'text-center',
     },
     {
-      key: 'variantCost',
-      header: 'Cost',
+      key: "variantQuantity",
+      header: "QTY",
       sortable: true,
-      render: (value) => formatCurrency(value),
-      className: 'text-right',
+      className: "text-center",
     },
     {
-      key: 'variantRetail',
-      header: 'Retail',
+      key: "variantCost",
+      header: "Cost",
       sortable: true,
       render: (value) => formatCurrency(value),
-      className: 'text-right',
+      className: "text-right",
     },
     {
-      key: 'variantSku',
-      header: 'SKU',
+      key: "variantRetail",
+      header: "Retail",
+      sortable: true,
+      render: (value) => formatCurrency(value),
+      className: "text-right",
+    },
+    {
+      key: "variantSku",
+      header: "SKU",
       sortable: true,
     },
     {
-      key: 'variantBarcode',
-      header: 'Barcode',
+      key: "variantBarcode",
+      header: "Barcode",
       sortable: true,
     },
     {
-      key: 'season',
-      header: 'Season',
-      render: () => '', // Empty as per original
+      key: "season",
+      header: "Season",
+      render: () => "", // Empty as per original
     },
     {
-      key: 'product.productType',
-      header: 'P-Type',
+      key: "product.productType",
+      header: "P-Type",
       sortable: true,
     },
     {
-      key: 'product.productTags',
-      header: 'Tags',
+      key: "product.productTags",
+      header: "Tags",
       sortable: true,
     },
     {
-      key: 'variantPreOrder',
-      header: 'Preorder',
+      key: "variantPreOrder",
+      header: "Preorder",
       render: (value) => (
-        <span 
+        <span
           className={`px-2 py-1 rounded text-xs font-medium ${
-            value === 'true' 
-              ? 'bg-red-100 text-red-800' 
-              : 'bg-gray-100 text-gray-800'
+            value === "true" ? "bg-red-100 text-red-800" : "bg-gray-100 text-gray-800"
           }`}
         >
           {value}
@@ -269,37 +278,38 @@ export default function DraftOrderDetail() {
       ),
     },
     {
-      key: 'margin',
-      header: 'Margin',
+      key: "margin",
+      header: "Margin",
       render: (_, variant) => {
-        const margin = variant.variantRetail !== 0 
-          ? (variant.variantRetail - variant.variantCost) / variant.variantRetail 
-          : 0;
+        const margin =
+          variant.variantRetail !== 0
+            ? (variant.variantRetail - variant.variantCost) / variant.variantRetail
+            : 0;
         return formatPercentage(margin * 100);
       },
-      className: 'text-right',
+      className: "text-right",
     },
     {
-      key: 'total',
-      header: 'Total',
+      key: "total",
+      header: "Total",
       render: (_, variant) => formatCurrency(variant.variantCost * variant.variantQuantity),
-      className: 'text-right font-semibold',
+      className: "text-right font-semibold",
     },
     {
-      key: 'variantMetafieldShoeSize',
-      header: 'S.S',
+      key: "variantMetafieldShoeSize",
+      header: "S.S",
     },
     {
-      key: 'variantMetafieldClothingSize',
-      header: 'C.S',
+      key: "variantMetafieldClothingSize",
+      header: "C.S",
     },
     {
-      key: 'variantMetafieldJeansSize',
-      header: 'J.S',
+      key: "variantMetafieldJeansSize",
+      header: "J.S",
     },
     {
-      key: 'variantMetafieldCategory',
-      header: 'CAT',
+      key: "variantMetafieldCategory",
+      header: "CAT",
     },
   ];
 
@@ -325,7 +335,7 @@ export default function DraftOrderDetail() {
             <AlertTriangle className="w-16 h-16 text-red-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-slate-900 mb-2">Error Loading Order</h3>
             <p className="text-red-600 mb-6">{error}</p>
-            <Button onClick={() => navigate('/draft-orders')}>Back to Draft Orders</Button>
+            <Button onClick={() => navigate("/draft-orders")}>Back to Draft Orders</Button>
           </Card>
         </div>
       </Layout>
@@ -335,9 +345,9 @@ export default function DraftOrderDetail() {
   return (
     <Layout title={`Draft Order #${order.purchaseOrderID}`}>
       <div className="w-full px-6 py-6 space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-5 space-y-6">
             {/* Header */}
             <Card>
               <div className="flex items-center justify-between">
@@ -350,7 +360,7 @@ export default function DraftOrderDetail() {
                     <p className="text-slate-600">Status: Draft</p>
                   </div>
                 </div>
-                <Button onClick={() => navigate('/draft-orders')} variant="outline">
+                <Button onClick={() => navigate("/draft-orders")} variant="outline">
                   Back to List
                 </Button>
               </div>
@@ -393,7 +403,8 @@ export default function DraftOrderDetail() {
                   <div className="space-y-1">
                     <span className="font-semibold text-slate-900">Payment Terms:</span>
                     <p className="text-sm text-slate-700">
-                      Deposit: {order.depositPercent}% - Delivery: {order.onDeliverPercent}% - Net30: {order.net30Percent}%
+                      Deposit: {order.depositPercent}% - Delivery: {order.onDeliverPercent}% -
+                      Net30: {order.net30Percent}%
                     </p>
                   </div>
                 </div>
@@ -430,16 +441,8 @@ export default function DraftOrderDetail() {
 
             {/* Payments and Credits */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <PaymentTable
-                title="Credits"
-                data={order.purchaseOrderCredits}
-                type="credits"
-              />
-              <PaymentTable
-                title="Payments"
-                data={order.purchaseOrderPayments}
-                type="payments"
-              />
+              <PaymentTable title="Credits" data={order.purchaseOrderCredits} type="credits" />
+              <PaymentTable title="Payments" data={order.purchaseOrderPayments} type="payments" />
             </div>
 
             {/* Notes and Actions */}
@@ -451,9 +454,9 @@ export default function DraftOrderDetail() {
                     <h5 className="text-lg font-semibold text-slate-900">Notes</h5>
                   </div>
                   <p className="text-slate-700 whitespace-pre-wrap">
-                    {order.purchaseOrderNotes || 'No notes available'}
+                    {order.purchaseOrderNotes || "No notes available"}
                   </p>
-                  
+
                   <div className="flex flex-col sm:flex-row gap-3 pt-4">
                     <Button
                       onClick={handleDeleteOrder}
@@ -480,24 +483,32 @@ export default function DraftOrderDetail() {
               <Card>
                 <div className="space-y-4">
                   <h4 className="text-lg font-semibold text-slate-900">Order Totals</h4>
-                  
+
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-slate-600">Sub-Total:</span>
-                      <span className="font-semibold">{formatCurrency(order.purchaseOrderTotalItemsCost)}</span>
+                      <span className="font-semibold">
+                        {formatCurrency(order.purchaseOrderTotalItemsCost)}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-slate-600">Payments:</span>
-                      <span className="font-semibold">{formatCurrency(order.purchaseOrderTotalPayments)}</span>
+                      <span className="font-semibold">
+                        {formatCurrency(order.purchaseOrderTotalPayments)}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-slate-600">Credits:</span>
-                      <span className="font-semibold">{formatCurrency(order.purchaseOrderTotalCredits)}</span>
+                      <span className="font-semibold">
+                        {formatCurrency(order.purchaseOrderTotalCredits)}
+                      </span>
                     </div>
                     <hr className="border-slate-200" />
                     <div className="flex justify-between items-center text-lg">
                       <span className="font-semibold text-slate-900">Total Balance Due:</span>
-                      <span className="font-bold text-slate-900">{formatCurrency(order.purchaseOrderBalanceDue)}</span>
+                      <span className="font-bold text-slate-900">
+                        {formatCurrency(order.purchaseOrderBalanceDue)}
+                      </span>
                     </div>
                   </div>
                 </div>

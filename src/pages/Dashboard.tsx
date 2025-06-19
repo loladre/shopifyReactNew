@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Layout from '../components/Layout';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import DataTable, { Column } from '../components/ui/DataTable';
-import StatusCard from '../components/ui/StatusCard';
-import ServerMessagePanel from '../components/ui/ServerMessagePanel';
-import { 
-  BarChart3, 
-  ShoppingCart, 
-  Package, 
-  TrendingUp, 
-  Users, 
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import Layout from "../components/Layout";
+import Card from "../components/ui/Card";
+import Button from "../components/ui/Button";
+import DataTable, { Column } from "../components/ui/DataTable";
+import StatusCard from "../components/ui/StatusCard";
+import ServerMessagePanel from "../components/ui/ServerMessagePanel";
+import {
+  BarChart3,
+  ShoppingCart,
+  Package,
+  TrendingUp,
+  Users,
   DollarSign,
   AlertTriangle,
   Clock,
@@ -29,8 +29,8 @@ import {
   Target,
   Zap,
   Plus,
-  Percent
-} from 'lucide-react';
+  Percent,
+} from "lucide-react";
 
 interface PaymentReminder {
   vendor: string;
@@ -38,7 +38,7 @@ interface PaymentReminder {
   vendorAmountToPay: number;
   vendorAmoutToPayDescription: string;
   vendorAmountToPayMethod: string;
-  urgency: 'overdue' | 'urgent' | 'upcoming' | 'normal';
+  urgency: "overdue" | "urgent" | "upcoming" | "normal";
 }
 
 interface LateOrder {
@@ -53,7 +53,7 @@ interface LateOrder {
   purchaseOrderCompleteReceive: boolean;
   purchaseOrderTotalItemsCost: number;
   progress: number;
-  urgency: 'critical' | 'warning' | 'normal';
+  urgency: "critical" | "warning" | "normal";
 }
 
 interface NewArrival {
@@ -85,7 +85,7 @@ interface DashboardStats {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  
+
   // State
   const [stats, setStats] = useState<DashboardStats>({
     totalOrders: 0,
@@ -97,14 +97,14 @@ export default function Dashboard() {
     newArrivalsCount: 0,
     completionRate: 0,
   });
-  
+
   const [paymentReminders, setPaymentReminders] = useState<PaymentReminder[]>([]);
   const [lateOrders, setLateOrders] = useState<LateOrder[]>([]);
   const [newArrivals, setNewArrivals] = useState<NewArrival[]>([]);
   const [seasonProgress, setSeasonProgress] = useState<SeasonProgress[]>([]);
-  
+
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   useEffect(() => {
@@ -114,19 +114,18 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
-      setError('');
-      
+      setError("");
+
       await Promise.all([
         fetchPaymentReminders(),
         fetchLateOrders(),
         fetchNewArrivals(),
         fetchSeasonProgress(),
       ]);
-      
+
       setLastUpdated(new Date());
-      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
+      setError(err instanceof Error ? err.message : "Failed to load dashboard data");
     } finally {
       setIsLoading(false);
     }
@@ -134,46 +133,46 @@ export default function Dashboard() {
 
   const fetchPaymentReminders = async () => {
     try {
-      const token = localStorage.getItem('bridesbyldToken');
-      
+      const token = localStorage.getItem("bridesbyldToken");
+
       if (!token) {
-        navigate('/');
+        navigate("/");
         return;
       }
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-      
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
       const response = await fetch(`${apiBaseUrl}${basePath}/shopify/paymentReminders`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch payment reminders');
+        throw new Error("Failed to fetch payment reminders");
       }
 
       const data = await response.json();
-      
+
       // Flatten and filter today's reminders
       const todayReminders: PaymentReminder[] = [];
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       data.forEach((vendorData: any) => {
         vendorData.paymentReminders.forEach((reminder: any) => {
           const dueDate = new Date(reminder.vendorAmountToPayDate);
           const timeDiff = (dueDate.getTime() - today.getTime()) / (1000 * 3600 * 24);
-          
-          let urgency: PaymentReminder['urgency'] = 'normal';
-          if (timeDiff < -3) urgency = 'overdue';
-          else if (timeDiff <= 2 && timeDiff >= -3) urgency = 'urgent';
-          else if (timeDiff <= 7) urgency = 'upcoming';
-          
+
+          let urgency: PaymentReminder["urgency"] = "normal";
+          if (timeDiff < -3) urgency = "overdue";
+          else if (timeDiff <= 2 && timeDiff >= -3) urgency = "urgent";
+          else if (timeDiff <= 7) urgency = "upcoming";
+
           // Only include urgent and overdue for dashboard
-          if (urgency === 'overdue' || urgency === 'urgent') {
+          if (urgency === "overdue" || urgency === "urgent") {
             todayReminders.push({
               vendor: vendorData.vendor,
               vendorAmountToPayDate: reminder.vendorAmountToPayDate,
@@ -185,109 +184,108 @@ export default function Dashboard() {
           }
         });
       });
-      
+
       setPaymentReminders(todayReminders);
-      
+
       // Update stats
-      setStats(prev => ({
+      setStats((prev) => ({
         ...prev,
         urgentRemindersCount: todayReminders.length,
       }));
-      
     } catch (err) {
-      console.error('Failed to fetch payment reminders:', err);
+      console.error("Failed to fetch payment reminders:", err);
     }
   };
 
   const fetchLateOrders = async () => {
     try {
-      const token = localStorage.getItem('bridesbyldToken');
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-      
+      const token = localStorage.getItem("bridesbyldToken");
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
       const response = await fetch(`${apiBaseUrl}${basePath}/shopify/getLateOrders`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch late orders');
+        throw new Error("Failed to fetch late orders");
       }
 
       const data = await response.json();
-      
+
       const processedOrders = data.map((order: any) => {
         const today = new Date();
         const startShipDate = new Date(order.startShipDate);
         const completeShipDate = new Date(order.completedDate);
         const startTimeLead = (startShipDate.getTime() - today.getTime()) / (1000 * 3600 * 24);
-        const completeTimeLead = (completeShipDate.getTime() - today.getTime()) / (1000 * 3600 * 24);
+        const completeTimeLead =
+          (completeShipDate.getTime() - today.getTime()) / (1000 * 3600 * 24);
         const percentageReceived = order.totalVariantReceivedQuantity / order.totalVariantQuantity;
-        
-        let urgency: LateOrder['urgency'] = 'normal';
+
+        let urgency: LateOrder["urgency"] = "normal";
         if (percentageReceived < 1) {
           if (startTimeLead < 0 && completeTimeLead < 0) {
-            urgency = 'critical';
+            urgency = "critical";
           } else if (startTimeLead <= 7 || completeTimeLead <= 14) {
-            urgency = 'warning';
+            urgency = "warning";
           }
         }
-        
+
         return {
           ...order,
           progress: percentageReceived * 100,
           urgency,
         };
       });
-      
+
       setLateOrders(processedOrders);
-      
+
       // Update stats
-      setStats(prev => ({
+      setStats((prev) => ({
         ...prev,
         lateOrdersCount: processedOrders.length,
       }));
-      
     } catch (err) {
-      console.error('Failed to fetch late orders:', err);
+      console.error("Failed to fetch late orders:", err);
     }
   };
 
   const fetchNewArrivals = async () => {
     try {
-      const token = localStorage.getItem('bridesbyldToken');
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-      
+      const token = localStorage.getItem("bridesbyldToken");
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
       // Get last 7 days
       const today = new Date();
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(today.getDate() - 7);
-      
+
       const formatDate = (date: Date): string => {
-        return date.toISOString().split('T')[0];
+        return date.toISOString().split("T")[0];
       };
-      
+
       const response = await fetch(`${apiBaseUrl}${basePath}/shopify/products-in-date-range`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ 
-          startDate: formatDate(sevenDaysAgo), 
-          endDate: formatDate(today) 
+        body: JSON.stringify({
+          startDate: formatDate(sevenDaysAgo),
+          endDate: formatDate(today),
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch new arrivals');
+        throw new Error("Failed to fetch new arrivals");
       }
 
       const data = await response.json();
-      
+
       // Flatten arrivals
       const arrivals: NewArrival[] = [];
       data.forEach((brandData: any) => {
@@ -300,17 +298,16 @@ export default function Dashboard() {
           });
         });
       });
-      
+
       setNewArrivals(arrivals);
-      
+
       // Update stats
-      setStats(prev => ({
+      setStats((prev) => ({
         ...prev,
         newArrivalsCount: arrivals.length,
       }));
-      
     } catch (err) {
-      console.error('Failed to fetch new arrivals:', err);
+      console.error("Failed to fetch new arrivals:", err);
     }
   };
 
@@ -320,7 +317,7 @@ export default function Dashboard() {
       // For now, we'll create mock data based on the structure
       const mockSeasonData: SeasonProgress[] = [
         {
-          season: 'Resort26',
+          season: "Resort26",
           totalOrdered: 1250,
           totalReceived: 980,
           totalValue: 125000,
@@ -328,7 +325,7 @@ export default function Dashboard() {
           brands: 12,
         },
         {
-          season: 'Spring26',
+          season: "Spring26",
           totalOrdered: 890,
           totalReceived: 650,
           totalValue: 89000,
@@ -336,7 +333,7 @@ export default function Dashboard() {
           brands: 8,
         },
         {
-          season: 'Summer26',
+          season: "Summer26",
           totalOrdered: 1100,
           totalReceived: 450,
           totalValue: 110000,
@@ -344,7 +341,7 @@ export default function Dashboard() {
           brands: 10,
         },
         {
-          season: 'Fall26',
+          season: "Fall26",
           totalOrdered: 750,
           totalReceived: 120,
           totalValue: 75000,
@@ -352,16 +349,16 @@ export default function Dashboard() {
           brands: 6,
         },
       ];
-      
+
       setSeasonProgress(mockSeasonData);
-      
+
       // Calculate overall stats
       const totalOrders = mockSeasonData.reduce((sum, season) => sum + season.totalOrdered, 0);
       const totalReceived = mockSeasonData.reduce((sum, season) => sum + season.totalReceived, 0);
       const totalValue = mockSeasonData.reduce((sum, season) => sum + season.totalValue, 0);
       const overallProgress = totalOrders > 0 ? (totalReceived / totalOrders) * 100 : 0;
-      
-      setStats(prev => ({
+
+      setStats((prev) => ({
         ...prev,
         totalOrders: totalOrders,
         totalProducts: totalReceived,
@@ -369,16 +366,15 @@ export default function Dashboard() {
         completionRate: overallProgress,
         growthRate: 12.5, // Mock growth rate
       }));
-      
     } catch (err) {
-      console.error('Failed to fetch season progress:', err);
+      console.error("Failed to fetch season progress:", err);
     }
   };
 
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -386,77 +382,83 @@ export default function Dashboard() {
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric'
+    return date.toLocaleDateString("en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      year: "numeric",
     });
   };
 
   const getUrgencyColor = (urgency: string): string => {
     switch (urgency) {
-      case 'overdue':
-      case 'critical':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'urgent':
-      case 'warning':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'upcoming':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case "overdue":
+      case "critical":
+        return "bg-red-100 text-red-800 border-red-200";
+      case "urgent":
+      case "warning":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "upcoming":
+        return "bg-blue-100 text-blue-800 border-blue-200";
       default:
-        return 'bg-slate-100 text-slate-800 border-slate-200';
+        return "bg-slate-100 text-slate-800 border-slate-200";
     }
   };
 
   // Payment Reminders columns
   const reminderColumns: Column[] = [
     {
-      key: 'vendor',
-      header: 'Brand',
+      key: "vendor",
+      header: "Brand",
       render: (value) => (
         <div className="flex items-center space-x-2">
           <Building2 className="w-4 h-4 text-slate-400" />
           <span className="font-medium">{value}</span>
         </div>
-      )
+      ),
     },
     {
-      key: 'vendorAmountToPayDate',
-      header: 'Payment Date',
+      key: "vendorAmountToPayDate",
+      header: "Payment Date",
       render: (value, reminder) => (
         <div className="flex items-center space-x-2">
           <Calendar className="w-4 h-4 text-slate-400" />
-          <span className={`px-2 py-1 rounded border text-sm font-medium ${getUrgencyColor(reminder.urgency)}`}>
+          <span
+            className={`px-2 py-1 rounded border text-sm font-medium ${getUrgencyColor(
+              reminder.urgency
+            )}`}
+          >
             {formatDate(value)}
           </span>
         </div>
-      )
+      ),
     },
     {
-      key: 'vendorAmountToPay',
-      header: 'Amount',
+      key: "vendorAmountToPay",
+      header: "Amount",
       render: (value) => (
         <div className="flex items-center space-x-2">
           <DollarSign className="w-4 h-4 text-slate-400" />
           <span className="font-semibold">{formatCurrency(value)}</span>
         </div>
       ),
-      className: 'text-right'
+      className: "text-right",
     },
     {
-      key: 'vendorAmountToPayMethod',
-      header: 'Method',
+      key: "vendorAmountToPayMethod",
+      header: "Method",
       render: (value) => (
-        <span className={`px-2 py-1 rounded text-xs font-medium ${
-          value === 'Wire' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-        }`}>
+        <span
+          className={`px-2 py-1 rounded text-xs font-medium ${
+            value === "Wire" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"
+          }`}
+        >
           {value}
         </span>
-      )
+      ),
     },
     {
-      key: 'actions',
-      header: 'Actions',
+      key: "actions",
+      header: "Actions",
       render: (_, reminder) => (
         <Button
           size="sm"
@@ -466,79 +468,77 @@ export default function Dashboard() {
           <Eye className="w-4 h-4 mr-1" />
           View
         </Button>
-      )
-    }
+      ),
+    },
   ];
 
   // Late Orders columns
   const lateOrderColumns: Column[] = [
     {
-      key: 'purchaseOrderID',
-      header: 'Order ID',
+      key: "purchaseOrderID",
+      header: "Order ID",
       render: (value) => (
         <div className="flex items-center space-x-2">
           <Hash className="w-4 h-4 text-slate-400" />
           <span className="font-medium">{value}</span>
         </div>
-      )
+      ),
     },
     {
-      key: 'brand',
-      header: 'Brand',
+      key: "brand",
+      header: "Brand",
       render: (value) => (
         <div className="flex items-center space-x-2">
           <Building2 className="w-4 h-4 text-slate-400" />
           <span>{value}</span>
         </div>
-      )
+      ),
     },
     {
-      key: 'purchaseOrderSeason',
-      header: 'Season',
+      key: "purchaseOrderSeason",
+      header: "Season",
       render: (value) => (
         <div className="flex items-center space-x-2">
           <Leaf className="w-4 h-4 text-slate-400" />
           <span>{value}</span>
         </div>
-      )
+      ),
     },
     {
-      key: 'startShipDate',
-      header: 'Start Ship',
+      key: "startShipDate",
+      header: "Start Ship",
       render: (value, order) => (
         <span className={`px-2 py-1 rounded text-sm ${getUrgencyColor(order.urgency)}`}>
           {formatDate(value)}
         </span>
-      )
+      ),
     },
     {
-      key: 'progress',
-      header: 'Progress',
+      key: "progress",
+      header: "Progress",
       render: (value) => (
         <div className="w-24">
           <div className="flex items-center space-x-2">
             <div className="flex-1 bg-slate-200 rounded-full h-2">
-              <div 
+              <div
                 className="bg-green-500 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${value}%` }}
               />
             </div>
-            <span className="text-xs font-medium text-slate-600 w-8">
-              {Math.round(value)}%
-            </span>
+            <span className="text-xs font-medium text-slate-600 w-8">{Math.round(value)}%</span>
           </div>
         </div>
-      )
+      ),
     },
     {
-      key: 'purchaseOrderTotalItemsCost',
-      header: 'Cost',
+      key: "purchaseOrderTotalItemsCost",
+      header: "Cost",
       render: (value) => formatCurrency(value),
-      className: 'text-right'
+      className: "text-right",
     },
     {
-      key: 'actions',
-      header: 'Actions',
+      key: "actions",
+      header: "Actions",
       render: (_, order) => (
         <Button
           size="sm"
@@ -548,34 +548,34 @@ export default function Dashboard() {
           <Eye className="w-4 h-4 mr-1" />
           View
         </Button>
-      )
-    }
+      ),
+    },
   ];
 
   // New Arrivals columns
   const arrivalColumns: Column[] = [
     {
-      key: 'brand',
-      header: 'Brand',
+      key: "brand",
+      header: "Brand",
       render: (value, _, index) => {
         // Group by brand logic
         const prevItem = index > 0 ? newArrivals[index - 1] : null;
         const isFirstOfBrand = !prevItem || prevItem.brand !== value;
-        
+
         return (
           <div className="flex items-center space-x-2">
             <Building2 className="w-4 h-4 text-slate-400" />
-            <span className={isFirstOfBrand ? 'font-bold' : 'text-transparent'}>
-              {isFirstOfBrand ? value : ''}
+            <span className={isFirstOfBrand ? "font-bold" : "text-transparent"}>
+              {isFirstOfBrand ? value : ""}
             </span>
           </div>
         );
-      }
+      },
     },
     {
-      key: 'title',
-      header: 'Style Name',
-      render: (value, arrival) => (
+      key: "title",
+      header: "Style Name",
+      render: (value, arrival) =>
         arrival.url ? (
           <a
             href={arrival.url}
@@ -588,15 +588,14 @@ export default function Dashboard() {
           </a>
         ) : (
           <span className="font-medium">{value}</span>
-        )
-      )
+        ),
     },
     {
-      key: 'price',
-      header: 'Price',
+      key: "price",
+      header: "Price",
       render: (value) => formatCurrency(value),
-      className: 'text-right'
-    }
+      className: "text-right",
+    },
   ];
 
   return (
@@ -619,9 +618,9 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-5 space-y-6">
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <StatusCard
@@ -661,17 +660,19 @@ export default function Dashboard() {
                   </div>
                 </div>
               </Card>
-              
+
               <Card className="border-yellow-200 bg-yellow-50">
                 <div className="flex items-center space-x-3">
                   <Bell className="w-8 h-8 text-yellow-600" />
                   <div>
                     <p className="text-yellow-600 text-sm font-medium">Payment Alerts</p>
-                    <p className="text-2xl font-bold text-yellow-900">{stats.urgentRemindersCount}</p>
+                    <p className="text-2xl font-bold text-yellow-900">
+                      {stats.urgentRemindersCount}
+                    </p>
                   </div>
                 </div>
               </Card>
-              
+
               <Card className="border-green-200 bg-green-50">
                 <div className="flex items-center space-x-3">
                   <Sparkles className="w-8 h-8 text-green-600" />
@@ -692,11 +693,7 @@ export default function Dashboard() {
                       <Bell className="w-5 h-5 mr-2 text-red-500" />
                       Urgent Payment Reminders
                     </h3>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate('/reminders')}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => navigate("/reminders")}>
                       View All
                     </Button>
                   </div>
@@ -722,11 +719,7 @@ export default function Dashboard() {
                       <AlertTriangle className="w-5 h-5 mr-2 text-red-500" />
                       Late Orders
                     </h3>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate('/late-orders')}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => navigate("/late-orders")}>
                       View All
                     </Button>
                   </div>
@@ -755,26 +748,23 @@ export default function Dashboard() {
                       <BarChart3 className="w-5 h-5 mr-2 text-purple-500" />
                       Season Progress
                     </h3>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate('/seasons')}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => navigate("/seasons")}>
                       View Details
                     </Button>
                   </div>
-                  
+
                   <div className="space-y-4">
                     {seasonProgress.map((season, index) => (
                       <div key={index} className="space-y-2">
                         <div className="flex justify-between items-center">
                           <span className="font-medium text-slate-900">{season.season}</span>
                           <span className="text-sm text-slate-600">
-                            {season.totalReceived}/{season.totalOrdered} ({Math.round(season.progress)}%)
+                            {season.totalReceived}/{season.totalOrdered} (
+                            {Math.round(season.progress)}%)
                           </span>
                         </div>
                         <div className="w-full bg-slate-200 rounded-full h-2">
-                          <div 
+                          <div
                             className="bg-purple-500 h-2 rounded-full transition-all duration-300"
                             style={{ width: `${season.progress}%` }}
                           />
@@ -796,11 +786,7 @@ export default function Dashboard() {
                       <Sparkles className="w-5 h-5 mr-2 text-green-500" />
                       New Arrivals (Last 7 Days)
                     </h3>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate('/new-arrivals')}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => navigate("/new-arrivals")}>
                       View All
                     </Button>
                   </div>
@@ -829,7 +815,7 @@ export default function Dashboard() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <button
-                    onClick={() => navigate('/purchase-order')}
+                    onClick={() => navigate("/purchase-order")}
                     className="p-4 text-left border border-slate-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors duration-200"
                   >
                     <div className="flex items-center space-x-3">
@@ -842,9 +828,9 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </button>
-                  
+
                   <button
-                    onClick={() => navigate('/draft-orders')}
+                    onClick={() => navigate("/draft-orders")}
                     className="p-4 text-left border border-slate-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors duration-200"
                   >
                     <div className="flex items-center space-x-3">
@@ -857,9 +843,9 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </button>
-                  
+
                   <button
-                    onClick={() => navigate('/bulk-discount')}
+                    onClick={() => navigate("/bulk-discount")}
                     className="p-4 text-left border border-slate-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors duration-200"
                   >
                     <div className="flex items-center space-x-3">
@@ -872,9 +858,9 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </button>
-                  
+
                   <button
-                    onClick={() => navigate('/vendors')}
+                    onClick={() => navigate("/vendors")}
                     className="p-4 text-left border border-slate-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors duration-200"
                   >
                     <div className="flex items-center space-x-3">
@@ -887,9 +873,9 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </button>
-                  
+
                   <button
-                    onClick={() => navigate('/new-arrivals')}
+                    onClick={() => navigate("/new-arrivals")}
                     className="p-4 text-left border border-slate-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors duration-200"
                   >
                     <div className="flex items-center space-x-3">
@@ -902,9 +888,9 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </button>
-                  
+
                   <button
-                    onClick={() => navigate('/counts')}
+                    onClick={() => navigate("/counts")}
                     className="p-4 text-left border border-slate-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors duration-200"
                   >
                     <div className="flex items-center space-x-3">
@@ -958,11 +944,15 @@ export default function Dashboard() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-purple-600">{Math.round(stats.completionRate)}%</div>
+                    <div className="text-3xl font-bold text-purple-600">
+                      {Math.round(stats.completionRate)}%
+                    </div>
                     <div className="text-sm text-slate-600">Overall Completion Rate</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-green-600">{stats.urgentRemindersCount}</div>
+                    <div className="text-3xl font-bold text-green-600">
+                      {stats.urgentRemindersCount}
+                    </div>
                     <div className="text-sm text-slate-600">Urgent Payment Alerts</div>
                   </div>
                   <div className="text-center">

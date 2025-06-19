@@ -30,7 +30,7 @@ import {
   RefreshCw,
   Settings,
   Eye,
-  TrendingUp
+  TrendingUp,
 } from "lucide-react";
 import * as ExcelJS from "exceljs";
 import { io, Socket } from "socket.io-client";
@@ -124,7 +124,7 @@ interface PurchaseOrderSchema {
 export default function PurchaseOrderImport() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // State
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -1155,10 +1155,11 @@ export default function PurchaseOrderImport() {
 
   // Calculate summary statistics
   const totalProducts = products.length;
-  const uniqueStyles = new Set(products.map(p => p.style)).size;
+  const uniqueStyles = new Set(products.map((p) => p.style)).size;
   const totalCost = products.reduce((sum, p) => sum + p.cost, 0);
   const totalRetail = products.reduce((sum, p) => sum + p.retail, 0);
-  const avgMargin = products.length > 0 ? products.reduce((sum, p) => sum + p.margin, 0) / products.length : 0;
+  const avgMargin =
+    products.length > 0 ? products.reduce((sum, p) => sum + p.margin, 0) / products.length : 0;
 
   return (
     <Layout title="New Purchase Order">
@@ -1172,7 +1173,9 @@ export default function PurchaseOrderImport() {
                 DRAFT
               </span>
             </h1>
-            <p className="text-slate-600 mt-1">Import and create a new purchase order from Excel file</p>
+            <p className="text-slate-600 mt-1">
+              Import and create a new purchase order from Excel file
+            </p>
           </div>
           <div className="flex space-x-3">
             <div className="relative">
@@ -1188,31 +1191,23 @@ export default function PurchaseOrderImport() {
                 {selectedFile ? selectedFile.name : "Choose Excel File"}
               </Button>
             </div>
-            <Button
-              onClick={handleFileUpload}
-              isLoading={isLoading}
-              disabled={!selectedFile}
-            >
+            <Button onClick={handleFileUpload} isLoading={isLoading} disabled={!selectedFile}>
               <Upload className="w-4 h-4 mr-2" />
               Upload
             </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-5 space-y-6">
             {/* Status Messages */}
             {error && (
               <Card className="border-red-200 bg-red-50">
                 <div className="flex items-center space-x-2 text-red-700">
                   <AlertCircle className="w-5 h-5" />
                   <span>{error}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setError('')}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setError("")}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -1224,11 +1219,7 @@ export default function PurchaseOrderImport() {
                 <div className="flex items-center space-x-2 text-green-700">
                   <CheckCircle className="w-5 h-5" />
                   <span>{success}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSuccess('')}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setSuccess("")}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -1244,12 +1235,7 @@ export default function PurchaseOrderImport() {
                   icon={Package}
                   color="blue"
                 />
-                <StatusCard
-                  title="Unique Styles"
-                  value={uniqueStyles}
-                  icon={Tag}
-                  color="green"
-                />
+                <StatusCard title="Unique Styles" value={uniqueStyles} icon={Tag} color="green" />
                 <StatusCard
                   title="Total Cost"
                   value={`$${totalCost.toFixed(2)}`}
@@ -1406,7 +1392,9 @@ export default function PurchaseOrderImport() {
                       <Input
                         type="date"
                         value={formData.startShipDate}
-                        onChange={(e) => setFormData({ ...formData, startShipDate: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, startShipDate: e.target.value })
+                        }
                         icon={<Calendar className="w-4 h-4 text-slate-400" />}
                       />
                     </FormField>
@@ -1641,9 +1629,13 @@ export default function PurchaseOrderImport() {
                             ${product.total.toFixed(2)}
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-600">{product.shoeSize}</td>
-                          <td className="px-4 py-3 text-sm text-slate-600">{product.clothingSize}</td>
+                          <td className="px-4 py-3 text-sm text-slate-600">
+                            {product.clothingSize}
+                          </td>
                           <td className="px-4 py-3 text-sm text-slate-600">{product.jeansSize}</td>
-                          <td className="px-4 py-3 text-sm text-slate-600">{product.metaCategory}</td>
+                          <td className="px-4 py-3 text-sm text-slate-600">
+                            {product.metaCategory}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

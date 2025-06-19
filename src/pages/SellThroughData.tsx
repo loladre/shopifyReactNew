@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Layout from '../components/Layout';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import FormField from '../components/ui/FormField';
-import DataTable, { Column } from '../components/ui/DataTable';
-import StatusCard from '../components/ui/StatusCard';
-import ServerMessagePanel from '../components/ui/ServerMessagePanel';
-import { 
-  BarChart3, 
-  Search, 
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import Layout from "../components/Layout";
+import Card from "../components/ui/Card";
+import Button from "../components/ui/Button";
+import FormField from "../components/ui/FormField";
+import DataTable, { Column } from "../components/ui/DataTable";
+import StatusCard from "../components/ui/StatusCard";
+import ServerMessagePanel from "../components/ui/ServerMessagePanel";
+import {
+  BarChart3,
+  Search,
   TrendingUp,
   DollarSign,
   Package,
@@ -18,8 +18,8 @@ import {
   Building2,
   AlertTriangle,
   FileSpreadsheet,
-  Download
-} from 'lucide-react';
+  Download,
+} from "lucide-react";
 
 interface SellThroughRecord {
   date: string;
@@ -48,25 +48,25 @@ interface UniqueValues {
 
 export default function SellThroughData() {
   const navigate = useNavigate();
-  
+
   // Filter state
-  const [selectedSeason, setSelectedSeason] = useState<string>('');
-  const [selectedBrand, setSelectedBrand] = useState<string>('');
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  
+  const [selectedSeason, setSelectedSeason] = useState<string>("");
+  const [selectedBrand, setSelectedBrand] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState<string>("");
+
   // Data state
   const [sellThroughData, setSellThroughData] = useState<SellThroughRecord[]>([]);
   const [totalData, setTotalData] = useState<SellThroughRecord[]>([]);
   const [uniqueValues, setUniqueValues] = useState<UniqueValues>({
     uniqueSeasons: [],
     uniqueBrands: [],
-    uniqueDates: []
+    uniqueDates: [],
   });
-  
+
   // UI state
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     fetchUniqueValues();
@@ -75,32 +75,31 @@ export default function SellThroughData() {
   const fetchUniqueValues = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('bridesbyldToken');
-      
+      const token = localStorage.getItem("bridesbyldToken");
+
       if (!token) {
-        navigate('/');
+        navigate("/");
         return;
       }
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-      
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
       const response = await fetch(`${apiBaseUrl}${basePath}/shopify/sellThroughUniqueValues`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch unique values');
+        throw new Error("Failed to fetch unique values");
       }
 
       const data: UniqueValues = await response.json();
       setUniqueValues(data);
-      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -109,12 +108,12 @@ export default function SellThroughData() {
   const handleSearch = async () => {
     try {
       setIsSearching(true);
-      setError('');
-      
-      const token = localStorage.getItem('bridesbyldToken');
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-      
+      setError("");
+
+      const token = localStorage.getItem("bridesbyldToken");
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
       const searchCriteria = {
         season: selectedSeason,
         brand: selectedBrand,
@@ -122,22 +121,22 @@ export default function SellThroughData() {
       };
 
       const response = await fetch(`${apiBaseUrl}${basePath}/shopify/sellThroughSearchEndpoint`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(searchCriteria),
       });
 
       if (!response.ok) {
-        throw new Error('Search failed');
+        throw new Error("Search failed");
       }
 
       const data: SellThroughRecord[] = await response.json();
-      
+
       // Process data to calculate additional fields and separate totals
-      const processedData = data.map(item => {
+      const processedData = data.map((item) => {
         const costOfReceived = item.cogs + item.costValue;
         const sellThroughDollar = costOfReceived > 0 ? (item.cogs / costOfReceived) * 100 : 0;
         const roi = item.netSales - costOfReceived;
@@ -153,23 +152,22 @@ export default function SellThroughData() {
       });
 
       // Separate main data from totals
-      const mainData = processedData.filter(item => item.brand !== 'Total');
-      const totalsData = processedData.filter(item => item.brand === 'Total');
-      
+      const mainData = processedData.filter((item) => item.brand !== "Total");
+      const totalsData = processedData.filter((item) => item.brand === "Total");
+
       setSellThroughData(mainData);
       setTotalData(totalsData);
-      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Search failed');
+      setError(err instanceof Error ? err.message : "Search failed");
     } finally {
       setIsSearching(false);
     }
   };
 
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 2,
     }).format(amount);
   };
@@ -180,144 +178,147 @@ export default function SellThroughData() {
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'numeric',
-      day: 'numeric',
-      year: 'numeric'
+    return date.toLocaleDateString("en-US", {
+      month: "numeric",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
   // Table columns for sell-through data
   const columns: Column[] = [
     {
-      key: 'date',
-      header: 'Date',
+      key: "date",
+      header: "Date",
       sortable: true,
       render: (value) => (
         <div className="flex items-center space-x-2">
           <Calendar className="w-4 h-4 text-slate-400" />
           <span>{formatDate(value)}</span>
         </div>
-      )
+      ),
     },
     {
-      key: 'brand',
-      header: 'Brand',
+      key: "brand",
+      header: "Brand",
       sortable: true,
       render: (value) => (
         <div className="flex items-center space-x-2">
           <Building2 className="w-4 h-4 text-slate-400" />
           <span className="font-medium">{value}</span>
         </div>
-      )
+      ),
     },
     {
-      key: 'qoh',
-      header: 'QOH',
+      key: "qoh",
+      header: "QOH",
       sortable: true,
       render: (value) => value.toLocaleString(),
-      className: 'text-right'
+      className: "text-right",
     },
     {
-      key: 'costValue',
-      header: 'Cost Value',
+      key: "costValue",
+      header: "Cost Value",
       sortable: true,
       render: (value) => formatCurrency(value),
-      className: 'text-right'
+      className: "text-right",
     },
     {
-      key: 'retailValue',
-      header: 'Retail Value',
+      key: "retailValue",
+      header: "Retail Value",
       sortable: true,
       render: (value) => formatCurrency(value),
-      className: 'text-right'
+      className: "text-right",
     },
     {
-      key: 'qtySold',
-      header: 'QTY Sold',
+      key: "qtySold",
+      header: "QTY Sold",
       sortable: true,
       render: (value) => value.toLocaleString(),
-      className: 'text-right'
+      className: "text-right",
     },
     {
-      key: 'qtyReceived',
-      header: 'QTY Received',
+      key: "qtyReceived",
+      header: "QTY Received",
       sortable: true,
       render: (value) => value.toLocaleString(),
-      className: 'text-right'
+      className: "text-right",
     },
     {
-      key: 'netSales',
-      header: 'Net Sales',
+      key: "netSales",
+      header: "Net Sales",
       sortable: true,
       render: (value) => formatCurrency(value),
-      className: 'text-right'
+      className: "text-right",
     },
     {
-      key: 'grossMarginDollar',
-      header: 'Gross Margin ($)',
+      key: "grossMarginDollar",
+      header: "Gross Margin ($)",
       sortable: true,
       render: (value) => formatCurrency(value),
-      className: 'text-right'
+      className: "text-right",
     },
     {
-      key: 'grossMarginPercent',
-      header: 'Gross Margin (%)',
+      key: "grossMarginPercent",
+      header: "Gross Margin (%)",
       sortable: true,
       render: (value) => formatPercentage(value * 100),
-      className: 'text-right'
+      className: "text-right",
     },
     {
-      key: 'cogs',
-      header: 'COGS',
+      key: "cogs",
+      header: "COGS",
       sortable: true,
       render: (value) => formatCurrency(value),
-      className: 'text-right'
+      className: "text-right",
     },
     {
-      key: 'sellThrough',
-      header: 'Sell-Through',
+      key: "sellThrough",
+      header: "Sell-Through",
       sortable: true,
       render: (value) => formatPercentage(value * 100),
-      className: 'text-right'
+      className: "text-right",
     },
     {
-      key: 'sellThroughDollar',
-      header: 'Sell-Through $',
+      key: "sellThroughDollar",
+      header: "Sell-Through $",
       sortable: true,
       render: (value) => formatPercentage(value),
-      className: 'text-right'
+      className: "text-right",
     },
     {
-      key: 'costOfReceived',
-      header: 'Cost of Received',
+      key: "costOfReceived",
+      header: "Cost of Received",
       sortable: true,
       render: (value) => formatCurrency(value),
-      className: 'text-right'
+      className: "text-right",
     },
     {
-      key: 'roi',
-      header: 'ROI $',
+      key: "roi",
+      header: "ROI $",
       sortable: true,
       render: (value) => formatCurrency(value),
-      className: 'text-right'
+      className: "text-right",
     },
     {
-      key: 'roiPercent',
-      header: 'ROI %',
+      key: "roiPercent",
+      header: "ROI %",
       sortable: true,
       render: (value) => formatPercentage(value),
-      className: 'text-right'
-    }
+      className: "text-right",
+    },
   ];
 
   // Calculate summary statistics
   const totalNetSales = sellThroughData.reduce((sum, item) => sum + item.netSales, 0);
   const totalQtySold = sellThroughData.reduce((sum, item) => sum + item.qtySold, 0);
   const totalROI = sellThroughData.reduce((sum, item) => sum + item.roi, 0);
-  const averageSellThrough = sellThroughData.length > 0 
-    ? sellThroughData.reduce((sum, item) => sum + item.sellThrough, 0) / sellThroughData.length * 100
-    : 0;
+  const averageSellThrough =
+    sellThroughData.length > 0
+      ? (sellThroughData.reduce((sum, item) => sum + item.sellThrough, 0) /
+          sellThroughData.length) *
+        100
+      : 0;
 
   if (error && !sellThroughData.length) {
     return (
@@ -325,7 +326,9 @@ export default function SellThroughData() {
         <div className="w-full px-6 py-6">
           <Card className="text-center py-12">
             <BarChart3 className="w-16 h-16 text-red-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-slate-900 mb-2">Error Loading Sell Through Data</h3>
+            <h3 className="text-xl font-semibold text-slate-900 mb-2">
+              Error Loading Sell Through Data
+            </h3>
             <p className="text-red-600 mb-6">{error}</p>
             <Button onClick={fetchUniqueValues}>Try Again</Button>
           </Card>
@@ -341,16 +344,18 @@ export default function SellThroughData() {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Sell Through Data</h1>
-            <p className="text-slate-600 mt-1">Generate reports and analyze sell-through performance</p>
+            <p className="text-slate-600 mt-1">
+              Generate reports and analyze sell-through performance
+            </p>
           </div>
           <Button onClick={fetchUniqueValues} isLoading={isLoading}>
             Refresh Data
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-5 space-y-6">
             {/* Search Filters */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
@@ -363,8 +368,10 @@ export default function SellThroughData() {
                       className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                     >
                       <option value="">All Seasons</option>
-                      {uniqueValues.uniqueSeasons.map(season => (
-                        <option key={season} value={season}>{season}</option>
+                      {uniqueValues.uniqueSeasons.map((season) => (
+                        <option key={season} value={season}>
+                          {season}
+                        </option>
                       ))}
                     </select>
                   </FormField>
@@ -382,8 +389,10 @@ export default function SellThroughData() {
                         className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                       >
                         <option value="">All Brands</option>
-                        {uniqueValues.uniqueBrands.map(brand => (
-                          <option key={brand} value={brand}>{brand}</option>
+                        {uniqueValues.uniqueBrands.map((brand) => (
+                          <option key={brand} value={brand}>
+                            {brand}
+                          </option>
                         ))}
                       </select>
                     </FormField>
@@ -394,20 +403,18 @@ export default function SellThroughData() {
                         className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                       >
                         <option value="">All Dates</option>
-                        {uniqueValues.uniqueDates.map(date => {
+                        {uniqueValues.uniqueDates.map((date) => {
                           const formattedDate = formatDate(date);
                           return (
-                            <option key={date} value={date}>{formattedDate}</option>
+                            <option key={date} value={date}>
+                              {formattedDate}
+                            </option>
                           );
                         })}
                       </select>
                     </FormField>
                   </div>
-                  <Button
-                    onClick={handleSearch}
-                    isLoading={isSearching}
-                    className="w-full"
-                  >
+                  <Button onClick={handleSearch} isLoading={isSearching} className="w-full">
                     <Search className="w-4 h-4 mr-2" />
                     Search
                   </Button>
@@ -503,7 +510,9 @@ export default function SellThroughData() {
               <Card className="text-center py-12">
                 <BarChart3 className="w-16 h-16 text-slate-400 mx-auto mb-4 animate-pulse" />
                 <h3 className="text-xl font-semibold text-slate-900 mb-2">Searching Data</h3>
-                <p className="text-slate-600">Please wait while we fetch the sell-through data...</p>
+                <p className="text-slate-600">
+                  Please wait while we fetch the sell-through data...
+                </p>
               </Card>
             )}
 
@@ -514,15 +523,21 @@ export default function SellThroughData() {
                   <h3 className="text-lg font-semibold text-slate-900">Performance Insights</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-green-600">{formatCurrency(totalNetSales)}</div>
+                      <div className="text-3xl font-bold text-green-600">
+                        {formatCurrency(totalNetSales)}
+                      </div>
                       <div className="text-sm text-slate-600">Total Net Sales</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-blue-600">{formatPercentage(averageSellThrough)}</div>
+                      <div className="text-3xl font-bold text-blue-600">
+                        {formatPercentage(averageSellThrough)}
+                      </div>
                       <div className="text-sm text-slate-600">Average Sell Through</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-purple-600">{sellThroughData.length}</div>
+                      <div className="text-3xl font-bold text-purple-600">
+                        {sellThroughData.length}
+                      </div>
                       <div className="text-sm text-slate-600">Total Records</div>
                     </div>
                   </div>
@@ -539,31 +554,41 @@ export default function SellThroughData() {
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
                         <span className="text-slate-600">Season:</span>
-                        <span className="font-semibold text-slate-900">{selectedSeason || 'All Seasons'}</span>
+                        <span className="font-semibold text-slate-900">
+                          {selectedSeason || "All Seasons"}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-slate-600">Brand:</span>
-                        <span className="font-semibold text-slate-900">{selectedBrand || 'All Brands'}</span>
+                        <span className="font-semibold text-slate-900">
+                          {selectedBrand || "All Brands"}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-slate-600">Date:</span>
                         <span className="font-semibold text-slate-900">
-                          {selectedDate ? formatDate(selectedDate) : 'All Dates'}
+                          {selectedDate ? formatDate(selectedDate) : "All Dates"}
                         </span>
                       </div>
                     </div>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
                         <span className="text-slate-600">Records Found:</span>
-                        <span className="font-semibold text-slate-900">{sellThroughData.length}</span>
+                        <span className="font-semibold text-slate-900">
+                          {sellThroughData.length}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-slate-600">Total Units Sold:</span>
-                        <span className="font-semibold text-slate-900">{totalQtySold.toLocaleString()}</span>
+                        <span className="font-semibold text-slate-900">
+                          {totalQtySold.toLocaleString()}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-slate-600">Total ROI:</span>
-                        <span className="font-semibold text-slate-900">{formatCurrency(totalROI)}</span>
+                        <span className="font-semibold text-slate-900">
+                          {formatCurrency(totalROI)}
+                        </span>
                       </div>
                     </div>
                   </div>

@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Layout from '../components/Layout';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
-import FormField from '../components/ui/FormField';
-import ServerMessagePanel from '../components/ui/ServerMessagePanel';
-import * as ExcelJS from 'exceljs';
-import { 
-  TrendingUp, 
-  Upload, 
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import Layout from "../components/Layout";
+import Card from "../components/ui/Card";
+import Button from "../components/ui/Button";
+import Input from "../components/ui/Input";
+import FormField from "../components/ui/FormField";
+import ServerMessagePanel from "../components/ui/ServerMessagePanel";
+import * as ExcelJS from "exceljs";
+import {
+  TrendingUp,
+  Upload,
   Calendar,
   FileSpreadsheet,
   AlertTriangle,
@@ -17,8 +17,8 @@ import {
   X,
   BarChart3,
   DollarSign,
-  Package
-} from 'lucide-react';
+  Package,
+} from "lucide-react";
 
 interface SellThroughData {
   date: string;
@@ -39,42 +39,42 @@ interface SellThroughData {
 export default function SellThroughImport() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Form state
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [selectedSeason, setSelectedSeason] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedSeason, setSelectedSeason] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [fileName, setFileName] = useState<string>('Choose file');
-  
+  const [fileName, setFileName] = useState<string>("Choose file");
+
   // UI state
   const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [success, setSuccess] = useState<string>('');
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
   const [processedData, setProcessedData] = useState<SellThroughData[]>([]);
 
   // Set today's date as default
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
     setSelectedDate(today);
   }, []);
 
   const seasonOptions = [
-    { value: '', label: 'Choose...' },
-    { value: 'Spring 23', label: 'Spring 23' },
-    { value: 'Summer 23', label: 'Summer 23' },
-    { value: 'Fall 23', label: 'Fall 23' },
-    { value: 'Resort 24', label: 'Resort 24' },
-    { value: 'Spring 24', label: 'Spring 24' },
-    { value: 'Summer 24', label: 'Summer 24' },
-    { value: 'Fall 24', label: 'Fall 24' },
-    { value: 'Resort 25', label: 'Resort 25' },
-    { value: 'Spring 25', label: 'Spring 25' },
-    { value: 'Summer 25', label: 'Summer 25' },
-    { value: 'Fall 25', label: 'Fall 25' },
-    { value: 'Resort 26', label: 'Resort 26' },
-    { value: 'Spring 26', label: 'Spring 26' },
-    { value: 'Summer 26', label: 'Summer 26' },
-    { value: 'Fall 26', label: 'Fall 26' },
+    { value: "", label: "Choose..." },
+    { value: "Spring 23", label: "Spring 23" },
+    { value: "Summer 23", label: "Summer 23" },
+    { value: "Fall 23", label: "Fall 23" },
+    { value: "Resort 24", label: "Resort 24" },
+    { value: "Spring 24", label: "Spring 24" },
+    { value: "Summer 24", label: "Summer 24" },
+    { value: "Fall 24", label: "Fall 24" },
+    { value: "Resort 25", label: "Resort 25" },
+    { value: "Spring 25", label: "Spring 25" },
+    { value: "Summer 25", label: "Summer 25" },
+    { value: "Fall 25", label: "Fall 25" },
+    { value: "Resort 26", label: "Resort 26" },
+    { value: "Spring 26", label: "Spring 26" },
+    { value: "Summer 26", label: "Summer 26" },
+    { value: "Fall 26", label: "Fall 26" },
   ];
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,14 +82,14 @@ export default function SellThroughImport() {
     if (file) {
       setSelectedFile(file);
       setFileName(file.name);
-      setError('');
+      setError("");
     }
   };
 
   const processExcelFile = async (file: File) => {
     try {
       setIsUploading(true);
-      setError('');
+      setError("");
 
       const workbook = new ExcelJS.Workbook();
       const arrayBuffer = await file.arrayBuffer();
@@ -97,45 +97,44 @@ export default function SellThroughImport() {
 
       const worksheet = workbook.getWorksheet(1);
       if (!worksheet) {
-        throw new Error('No worksheet found in the Excel file');
+        throw new Error("No worksheet found in the Excel file");
       }
 
       const sellThroughData: SellThroughData[] = [];
-      
+
       // Skip header row and process data
       worksheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return; // Skip header
-        
+
         const values = row.values as any[];
-        
+
         // Filter out rows with 0% or empty data
         const percentDiff = values[3];
         if (percentDiff === "0%" || percentDiff === 0 || !values[1]) return;
-        
+
         const rowData: SellThroughData = {
           date: selectedDate,
           season: selectedSeason,
-          brand: String(values[1] || ''),
-          qoh: parseFloat(String(values[2]).replace(/[,$]/g, '')) || 0,
-          costValue: parseFloat(String(values[3]).replace(/[,$]/g, '')) || 0,
-          retailValue: parseFloat(String(values[4]).replace(/[,$]/g, '')) || 0,
-          qtySold: parseFloat(String(values[5]).replace(/[,$]/g, '')) || 0,
-          qtyReceived: parseFloat(String(values[6]).replace(/[,$]/g, '')) || 0,
-          netSales: parseFloat(String(values[7]).replace(/[,$]/g, '')) || 0,
-          grossMarginDollar: parseFloat(String(values[8]).replace(/[,$]/g, '')) || 0,
-          grossMarginPercent: parseFloat(String(values[9]).replace(/[,$%]/g, '')) || 0,
-          cogs: parseFloat(String(values[10]).replace(/[,$]/g, '')) || 0,
-          sellThrough: parseFloat(String(values[11]).replace(/[,$%]/g, '')) || 0,
+          brand: String(values[1] || ""),
+          qoh: parseFloat(String(values[2]).replace(/[,$]/g, "")) || 0,
+          costValue: parseFloat(String(values[3]).replace(/[,$]/g, "")) || 0,
+          retailValue: parseFloat(String(values[4]).replace(/[,$]/g, "")) || 0,
+          qtySold: parseFloat(String(values[5]).replace(/[,$]/g, "")) || 0,
+          qtyReceived: parseFloat(String(values[6]).replace(/[,$]/g, "")) || 0,
+          netSales: parseFloat(String(values[7]).replace(/[,$]/g, "")) || 0,
+          grossMarginDollar: parseFloat(String(values[8]).replace(/[,$]/g, "")) || 0,
+          grossMarginPercent: parseFloat(String(values[9]).replace(/[,$%]/g, "")) || 0,
+          cogs: parseFloat(String(values[10]).replace(/[,$]/g, "")) || 0,
+          sellThrough: parseFloat(String(values[11]).replace(/[,$%]/g, "")) || 0,
         };
-        
+
         sellThroughData.push(rowData);
       });
 
       setProcessedData(sellThroughData);
       await sendData(sellThroughData);
-      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to process Excel file');
+      setError(err instanceof Error ? err.message : "Failed to process Excel file");
     } finally {
       setIsUploading(false);
     }
@@ -143,57 +142,56 @@ export default function SellThroughImport() {
 
   const sendData = async (data: SellThroughData[]) => {
     try {
-      const token = localStorage.getItem('bridesbyldToken');
-      
+      const token = localStorage.getItem("bridesbyldToken");
+
       if (!token) {
-        navigate('/');
+        navigate("/");
         return;
       }
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-      
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
       const response = await fetch(`${apiBaseUrl}${basePath}/shopify/saveSellThroughData`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save sell-through data');
+        throw new Error("Failed to save sell-through data");
       }
 
       const result = await response.json();
       setSuccess(`Successfully imported ${data.length} sell-through records for ${selectedSeason}`);
-      
+
       // Reset form
       setSelectedFile(null);
-      setFileName('Choose file');
+      setFileName("Choose file");
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
-      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save sell-through data');
+      setError(err instanceof Error ? err.message : "Failed to save sell-through data");
     }
   };
 
   const handleUpload = () => {
     if (!selectedDate) {
-      setError('Please select a date');
+      setError("Please select a date");
       return;
     }
 
     if (!selectedSeason) {
-      setError('Please select a season');
+      setError("Please select a season");
       return;
     }
 
     if (!selectedFile) {
-      setError('Please select an Excel file');
+      setError("Please select an Excel file");
       return;
     }
 
@@ -201,9 +199,9 @@ export default function SellThroughImport() {
   };
 
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 2,
     }).format(amount);
   };
@@ -216,9 +214,10 @@ export default function SellThroughImport() {
   const totalRecords = processedData.length;
   const totalNetSales = processedData.reduce((sum, item) => sum + item.netSales, 0);
   const totalQtySold = processedData.reduce((sum, item) => sum + item.qtySold, 0);
-  const averageSellThrough = totalRecords > 0 
-    ? processedData.reduce((sum, item) => sum + item.sellThrough, 0) / totalRecords 
-    : 0;
+  const averageSellThrough =
+    totalRecords > 0
+      ? processedData.reduce((sum, item) => sum + item.sellThrough, 0) / totalRecords
+      : 0;
 
   return (
     <Layout title="Sell Through Import">
@@ -231,9 +230,9 @@ export default function SellThroughImport() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-5 space-y-6">
             {/* Import Form */}
             <Card>
               <div className="space-y-6">
@@ -241,7 +240,7 @@ export default function SellThroughImport() {
                   <TrendingUp className="w-5 h-5 mr-2" />
                   Import Sell-Through Data
                 </h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <FormField label="Date" required>
                     <div className="relative">
@@ -261,8 +260,10 @@ export default function SellThroughImport() {
                       onChange={(e) => setSelectedSeason(e.target.value)}
                       className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                     >
-                      {seasonOptions.map(option => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
+                      {seasonOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
                       ))}
                     </select>
                   </FormField>
@@ -293,7 +294,7 @@ export default function SellThroughImport() {
                         className="w-full"
                       >
                         <Upload className="w-4 h-4 mr-2" />
-                        {isUploading ? 'Processing...' : 'Upload & Process'}
+                        {isUploading ? "Processing..." : "Upload & Process"}
                       </Button>
                     </div>
                   </FormField>
@@ -301,7 +302,9 @@ export default function SellThroughImport() {
 
                 <div className="text-sm text-slate-600 bg-slate-50 p-4 rounded-lg">
                   <h4 className="font-semibold mb-2">Expected Excel Format:</h4>
-                  <p className="mb-2">The Excel file should contain the following columns in order:</p>
+                  <p className="mb-2">
+                    The Excel file should contain the following columns in order:
+                  </p>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <span>1. Brand</span>
                     <span>2. QOH (Quantity on Hand)</span>
@@ -325,11 +328,7 @@ export default function SellThroughImport() {
                 <div className="flex items-center space-x-2 text-red-700">
                   <AlertTriangle className="w-5 h-5" />
                   <span>{error}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setError('')}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setError("")}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -341,11 +340,7 @@ export default function SellThroughImport() {
                 <div className="flex items-center space-x-2 text-green-700">
                   <CheckCircle className="w-5 h-5" />
                   <span>{success}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSuccess('')}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setSuccess("")}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -371,7 +366,9 @@ export default function SellThroughImport() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-green-600 text-sm font-medium">Total Net Sales</p>
-                      <p className="text-2xl font-bold text-green-900">{formatCurrency(totalNetSales)}</p>
+                      <p className="text-2xl font-bold text-green-900">
+                        {formatCurrency(totalNetSales)}
+                      </p>
                     </div>
                     <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
                       <DollarSign className="w-6 h-6 text-white" />
@@ -383,7 +380,9 @@ export default function SellThroughImport() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-purple-600 text-sm font-medium">Total Qty Sold</p>
-                      <p className="text-2xl font-bold text-purple-900">{totalQtySold.toLocaleString()}</p>
+                      <p className="text-2xl font-bold text-purple-900">
+                        {totalQtySold.toLocaleString()}
+                      </p>
                     </div>
                     <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
                       <Package className="w-6 h-6 text-white" />
@@ -395,7 +394,9 @@ export default function SellThroughImport() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-orange-600 text-sm font-medium">Avg Sell Through</p>
-                      <p className="text-2xl font-bold text-orange-900">{formatPercentage(averageSellThrough)}</p>
+                      <p className="text-2xl font-bold text-orange-900">
+                        {formatPercentage(averageSellThrough)}
+                      </p>
                     </div>
                     <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center">
                       <TrendingUp className="w-6 h-6 text-white" />
@@ -428,15 +429,21 @@ export default function SellThroughImport() {
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
                         <span className="text-slate-600">Total Net Sales:</span>
-                        <span className="font-semibold text-slate-900">{formatCurrency(totalNetSales)}</span>
+                        <span className="font-semibold text-slate-900">
+                          {formatCurrency(totalNetSales)}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-slate-600">Total Units Sold:</span>
-                        <span className="font-semibold text-slate-900">{totalQtySold.toLocaleString()}</span>
+                        <span className="font-semibold text-slate-900">
+                          {totalQtySold.toLocaleString()}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-slate-600">Average Sell Through:</span>
-                        <span className="font-semibold text-slate-900">{formatPercentage(averageSellThrough)}</span>
+                        <span className="font-semibold text-slate-900">
+                          {formatPercentage(averageSellThrough)}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -448,8 +455,12 @@ export default function SellThroughImport() {
             {processedData.length === 0 && !isUploading && (
               <Card className="text-center py-12">
                 <TrendingUp className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">Import Sell-Through Data</h3>
-                <p className="text-slate-600 mb-6">Upload an Excel file containing weekly sell-through data to get started.</p>
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                  Import Sell-Through Data
+                </h3>
+                <p className="text-slate-600 mb-6">
+                  Upload an Excel file containing weekly sell-through data to get started.
+                </p>
                 <div className="text-sm text-slate-500">
                   Features available:
                   <ul className="mt-2 space-y-1">

@@ -1,23 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Layout from '../components/Layout';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import DataTable, { Column } from '../components/ui/DataTable';
-import StatusCard from '../components/ui/StatusCard';
-import ServerMessagePanel from '../components/ui/ServerMessagePanel';
-import { 
-  Bell, 
-  Calendar, 
-  DollarSign, 
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import Layout from "../components/Layout";
+import Card from "../components/ui/Card";
+import Button from "../components/ui/Button";
+import DataTable, { Column } from "../components/ui/DataTable";
+import StatusCard from "../components/ui/StatusCard";
+import ServerMessagePanel from "../components/ui/ServerMessagePanel";
+import {
+  Bell,
+  Calendar,
+  DollarSign,
   Building2,
   AlertTriangle,
   Clock,
   CheckCircle,
   TrendingUp,
   Eye,
-  Filter
-} from 'lucide-react';
+  Filter,
+} from "lucide-react";
 
 interface PaymentReminder {
   vendor: string;
@@ -36,10 +36,10 @@ export default function Reminders() {
   const [allReminders, setAllReminders] = useState<PaymentReminder[]>([]);
   const [filteredReminders, setFilteredReminders] = useState<PaymentReminder[]>([]);
   const [vendors, setVendors] = useState<string[]>([]);
-  const [selectedVendor, setSelectedVendor] = useState<string>('All Vendors');
-  const [selectedUrgency, setSelectedUrgency] = useState<string>('All');
+  const [selectedVendor, setSelectedVendor] = useState<string>("All Vendors");
+  const [selectedUrgency, setSelectedUrgency] = useState<string>("All");
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -53,48 +53,47 @@ export default function Reminders() {
   const fetchPaymentReminders = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('bridesbyldToken');
-      
+      const token = localStorage.getItem("bridesbyldToken");
+
       if (!token) {
-        navigate('/');
+        navigate("/");
         return;
       }
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-      
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
       const response = await fetch(`${apiBaseUrl}${basePath}/shopify/paymentReminders`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch payment reminders');
+        throw new Error("Failed to fetch payment reminders");
       }
 
       const data: VendorReminders[] = await response.json();
-      
+
       // Flatten the reminders and add vendor info
       const flattenedReminders: PaymentReminder[] = [];
       const vendorList: string[] = [];
-      
-      data.forEach(vendorData => {
+
+      data.forEach((vendorData) => {
         vendorList.push(vendorData.vendor);
-        vendorData.paymentReminders.forEach(reminder => {
+        vendorData.paymentReminders.forEach((reminder) => {
           flattenedReminders.push({
             ...reminder,
-            vendor: vendorData.vendor
+            vendor: vendorData.vendor,
           });
         });
       });
-      
+
       setAllReminders(flattenedReminders);
       setVendors(vendorList.sort());
-      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -104,13 +103,13 @@ export default function Reminders() {
     let filtered = allReminders;
 
     // Filter by vendor
-    if (selectedVendor !== 'All Vendors') {
-      filtered = filtered.filter(reminder => reminder.vendor === selectedVendor);
+    if (selectedVendor !== "All Vendors") {
+      filtered = filtered.filter((reminder) => reminder.vendor === selectedVendor);
     }
 
     // Filter by urgency
-    if (selectedUrgency !== 'All') {
-      filtered = filtered.filter(reminder => {
+    if (selectedUrgency !== "All") {
+      filtered = filtered.filter((reminder) => {
         const urgency = getDateUrgency(reminder.vendorAmountToPayDate);
         return urgency === selectedUrgency;
       });
@@ -119,37 +118,37 @@ export default function Reminders() {
     setFilteredReminders(filtered);
   };
 
-  const getDateUrgency = (dateString: string): 'overdue' | 'urgent' | 'upcoming' | 'normal' => {
+  const getDateUrgency = (dateString: string): "overdue" | "urgent" | "upcoming" | "normal" => {
     const today = new Date();
     const date = new Date(dateString);
     const timeDiff = (date.getTime() - today.getTime()) / (1000 * 3600 * 24);
-    
-    if (timeDiff < -3) return 'overdue';
-    if (timeDiff <= 2 && timeDiff >= -3) return 'urgent';
-    if (timeDiff <= 7) return 'upcoming';
-    return 'normal';
+
+    if (timeDiff < -3) return "overdue";
+    if (timeDiff <= 2 && timeDiff >= -3) return "urgent";
+    if (timeDiff <= 7) return "upcoming";
+    return "normal";
   };
 
   const getUrgencyColor = (urgency: string): string => {
     switch (urgency) {
-      case 'overdue':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'urgent':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'upcoming':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case "overdue":
+        return "bg-red-100 text-red-800 border-red-200";
+      case "urgent":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "upcoming":
+        return "bg-blue-100 text-blue-800 border-blue-200";
       default:
-        return 'bg-slate-100 text-slate-800 border-slate-200';
+        return "bg-slate-100 text-slate-800 border-slate-200";
     }
   };
 
   const getUrgencyIcon = (urgency: string) => {
     switch (urgency) {
-      case 'overdue':
+      case "overdue":
         return <AlertTriangle className="w-4 h-4 text-red-600" />;
-      case 'urgent':
+      case "urgent":
         return <Clock className="w-4 h-4 text-yellow-600" />;
-      case 'upcoming':
+      case "upcoming":
         return <Calendar className="w-4 h-4 text-blue-600" />;
       default:
         return <CheckCircle className="w-4 h-4 text-slate-600" />;
@@ -158,17 +157,17 @@ export default function Reminders() {
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric'
+    return date.toLocaleDateString("en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      year: "numeric",
     });
   };
 
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 2,
     }).format(amount);
   };
@@ -180,24 +179,24 @@ export default function Reminders() {
 
   const columns: Column[] = [
     {
-      key: 'vendor',
-      header: 'Brand',
+      key: "vendor",
+      header: "Brand",
       sortable: true,
       render: (value) => (
         <div className="flex items-center space-x-2">
           <Building2 className="w-4 h-4 text-slate-400" />
           <span className="font-medium">{value}</span>
         </div>
-      )
+      ),
     },
     {
-      key: 'vendorAmountToPayDate',
-      header: 'Payment Date',
+      key: "vendorAmountToPayDate",
+      header: "Payment Date",
       sortable: true,
       render: (value, reminder) => {
         const urgency = getDateUrgency(value);
         const urgencyColor = getUrgencyColor(urgency);
-        
+
         return (
           <div className="flex items-center space-x-2">
             {getUrgencyIcon(urgency)}
@@ -206,11 +205,11 @@ export default function Reminders() {
             </span>
           </div>
         );
-      }
+      },
     },
     {
-      key: 'vendorAmountToPay',
-      header: 'Amount',
+      key: "vendorAmountToPay",
+      header: "Amount",
       sortable: true,
       render: (value) => (
         <div className="flex items-center space-x-2">
@@ -218,48 +217,50 @@ export default function Reminders() {
           <span className="font-semibold">{formatCurrency(value)}</span>
         </div>
       ),
-      className: 'text-right'
+      className: "text-right",
     },
     {
-      key: 'vendorAmoutToPayDescription',
-      header: 'Description',
+      key: "vendorAmoutToPayDescription",
+      header: "Description",
       sortable: true,
-      render: (value) => (
-        <span className="text-slate-700">{value || '-'}</span>
-      )
+      render: (value) => <span className="text-slate-700">{value || "-"}</span>,
     },
     {
-      key: 'vendorAmountToPayMethod',
-      header: 'Method',
+      key: "vendorAmountToPayMethod",
+      header: "Method",
       sortable: true,
       render: (value) => (
-        <span className={`px-2 py-1 rounded text-xs font-medium ${
-          value === 'Wire' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-        }`}>
+        <span
+          className={`px-2 py-1 rounded text-xs font-medium ${
+            value === "Wire" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"
+          }`}
+        >
           {value}
         </span>
-      )
+      ),
     },
     {
-      key: 'urgency',
-      header: 'Urgency',
+      key: "urgency",
+      header: "Urgency",
       render: (_, reminder) => {
         const urgency = getDateUrgency(reminder.vendorAmountToPayDate);
         const urgencyColor = getUrgencyColor(urgency);
-        
+
         return (
           <div className="flex items-center space-x-2">
             {getUrgencyIcon(urgency)}
-            <span className={`px-2 py-1 rounded border text-xs font-medium capitalize ${urgencyColor}`}>
+            <span
+              className={`px-2 py-1 rounded border text-xs font-medium capitalize ${urgencyColor}`}
+            >
               {urgency}
             </span>
           </div>
         );
-      }
+      },
     },
     {
-      key: 'actions',
-      header: 'Actions',
+      key: "actions",
+      header: "Actions",
       render: (_, reminder) => (
         <Button
           size="sm"
@@ -272,24 +273,27 @@ export default function Reminders() {
           <Eye className="w-4 h-4 mr-1" />
           View
         </Button>
-      )
-    }
+      ),
+    },
   ];
 
   // Calculate summary statistics
   const totalReminders = filteredReminders.length;
-  const totalAmount = filteredReminders.reduce((sum, reminder) => sum + reminder.vendorAmountToPay, 0);
-  
-  const overdueReminders = filteredReminders.filter(reminder => 
-    getDateUrgency(reminder.vendorAmountToPayDate) === 'overdue'
+  const totalAmount = filteredReminders.reduce(
+    (sum, reminder) => sum + reminder.vendorAmountToPay,
+    0
+  );
+
+  const overdueReminders = filteredReminders.filter(
+    (reminder) => getDateUrgency(reminder.vendorAmountToPayDate) === "overdue"
   ).length;
-  
-  const urgentReminders = filteredReminders.filter(reminder => 
-    getDateUrgency(reminder.vendorAmountToPayDate) === 'urgent'
+
+  const urgentReminders = filteredReminders.filter(
+    (reminder) => getDateUrgency(reminder.vendorAmountToPayDate) === "urgent"
   ).length;
-  
-  const upcomingReminders = filteredReminders.filter(reminder => 
-    getDateUrgency(reminder.vendorAmountToPayDate) === 'upcoming'
+
+  const upcomingReminders = filteredReminders.filter(
+    (reminder) => getDateUrgency(reminder.vendorAmountToPayDate) === "upcoming"
   ).length;
 
   if (error) {
@@ -321,17 +325,12 @@ export default function Reminders() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-5 space-y-6">
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatusCard
-                title="Total Reminders"
-                value={totalReminders}
-                icon={Bell}
-                color="blue"
-              />
+              <StatusCard title="Total Reminders" value={totalReminders} icon={Bell} color="blue" />
               <StatusCard
                 title="Overdue"
                 value={overdueReminders}
@@ -363,25 +362,25 @@ export default function Reminders() {
                   <div className="flex items-center space-x-2">
                     <AlertTriangle className="w-4 h-4 text-red-600" />
                     <span className="px-2 py-1 rounded border bg-red-100 text-red-800 border-red-200 text-xs font-medium">
-                      {'Overdue (>3 days late)'}
+                      {"Overdue (>3 days late)"}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Clock className="w-4 h-4 text-yellow-600" />
                     <span className="px-2 py-1 rounded border bg-yellow-100 text-yellow-800 border-yellow-200 text-xs font-medium">
-                      {'Urgent (≤2 days)'}
+                      {"Urgent (≤2 days)"}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Calendar className="w-4 h-4 text-blue-600" />
                     <span className="px-2 py-1 rounded border bg-blue-100 text-blue-800 border-blue-200 text-xs font-medium">
-                      {'Upcoming (≤7 days)'}
+                      {"Upcoming (≤7 days)"}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <CheckCircle className="w-4 h-4 text-slate-600" />
                     <span className="px-2 py-1 rounded border bg-slate-100 text-slate-800 border-slate-200 text-xs font-medium">
-                      {'Normal (>7 days)'}
+                      {"Normal (>7 days)"}
                     </span>
                   </div>
                 </div>
@@ -394,7 +393,10 @@ export default function Reminders() {
                 <h3 className="text-sm font-semibold text-slate-700">Filter Reminders</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="vendorSelect" className="block text-xs font-medium text-slate-600 mb-1">
+                    <label
+                      htmlFor="vendorSelect"
+                      className="block text-xs font-medium text-slate-600 mb-1"
+                    >
                       Filter by Vendor:
                     </label>
                     <select
@@ -404,13 +406,18 @@ export default function Reminders() {
                       className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                     >
                       <option value="All Vendors">All Vendors</option>
-                      {vendors.map(vendor => (
-                        <option key={vendor} value={vendor}>{vendor}</option>
+                      {vendors.map((vendor) => (
+                        <option key={vendor} value={vendor}>
+                          {vendor}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="urgencySelect" className="block text-xs font-medium text-slate-600 mb-1">
+                    <label
+                      htmlFor="urgencySelect"
+                      className="block text-xs font-medium text-slate-600 mb-1"
+                    >
                       Filter by Urgency:
                     </label>
                     <select
@@ -447,7 +454,9 @@ export default function Reminders() {
                     <div className="text-sm text-slate-600">Upcoming</div>
                   </div>
                   <div className="space-y-1">
-                    <div className="text-2xl font-bold text-green-600">{formatCurrency(totalAmount)}</div>
+                    <div className="text-2xl font-bold text-green-600">
+                      {formatCurrency(totalAmount)}
+                    </div>
                     <div className="text-sm text-slate-600">Total Amount</div>
                   </div>
                 </div>

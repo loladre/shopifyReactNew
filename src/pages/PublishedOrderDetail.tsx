@@ -473,9 +473,9 @@ export default function PublishedOrderDetail() {
   return (
     <Layout title={`Published Order #${order.purchaseOrderID}`}>
       <div className="w-full px-6 py-6 space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-5 space-y-6">
             {/* Header */}
             <Card>
               <div className="flex items-center justify-between">

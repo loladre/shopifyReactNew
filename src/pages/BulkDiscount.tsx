@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Layout from '../components/Layout';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
-import FormField from '../components/ui/FormField';
-import DataTable, { Column } from '../components/ui/DataTable';
-import StatusCard from '../components/ui/StatusCard';
-import ServerMessagePanel from '../components/ui/ServerMessagePanel';
-import { 
-  Percent, 
-  Package, 
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import Layout from "../components/Layout";
+import Card from "../components/ui/Card";
+import Button from "../components/ui/Button";
+import Input from "../components/ui/Input";
+import FormField from "../components/ui/FormField";
+import DataTable, { Column } from "../components/ui/DataTable";
+import StatusCard from "../components/ui/StatusCard";
+import ServerMessagePanel from "../components/ui/ServerMessagePanel";
+import {
+  Percent,
+  Package,
   Search,
   Plus,
   X,
@@ -27,8 +27,8 @@ import {
   Eye,
   Settings,
   Loader2,
-  Save
-} from 'lucide-react';
+  Save,
+} from "lucide-react";
 
 interface CriteriaLine {
   id: string;
@@ -66,47 +66,47 @@ interface BulkDiscountProduct {
 
 export default function BulkDiscount() {
   const navigate = useNavigate();
-  
+
   // State for criteria building
   const [criteriaLines, setCriteriaLines] = useState<CriteriaLine[]>([
     {
-      id: '1',
-      item: '',
-      condition: 'EQUALS',
-      conditionTag: 'CONTAINS',
-      season: '',
-      seasonYear: '',
-      vendor: '',
-      category: '',
-      tagInput: '',
-    }
+      id: "1",
+      item: "",
+      condition: "EQUALS",
+      conditionTag: "CONTAINS",
+      season: "",
+      seasonYear: "",
+      vendor: "",
+      category: "",
+      tagInput: "",
+    },
   ]);
-  
+
   // State for products and filtering
   const [products, setProducts] = useState<BulkDiscountProduct[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<BulkDiscountProduct[]>([]);
   const [vendors, setVendors] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
-  
+
   // State for filters
   const [excludeOutOfStock, setExcludeOutOfStock] = useState(false);
   const [excludeNotReceived, setExcludeNotReceived] = useState(false);
   const [excludeNoPictures, setExcludeNoPictures] = useState(false);
   const [excludeDiscountAbove, setExcludeDiscountAbove] = useState(false);
   const [maxDiscountPercent, setMaxDiscountPercent] = useState<number>(0);
-  
+
   // State for discount application
   const [discountPercent, setDiscountPercent] = useState<number>(0);
-  const [discountName, setDiscountName] = useState<string>('');
-  const [saleName, setSaleName] = useState<string>('');
-  const [generatedSeason, setGeneratedSeason] = useState<string>('');
-  
+  const [discountName, setDiscountName] = useState<string>("");
+  const [saleName, setSaleName] = useState<string>("");
+  const [generatedSeason, setGeneratedSeason] = useState<string>("");
+
   // UI state
   const [isLoading, setIsLoading] = useState(false);
   const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [success, setSuccess] = useState<string>('');
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
   const [discountApplied, setDiscountApplied] = useState(false);
 
   useEffect(() => {
@@ -116,61 +116,66 @@ export default function BulkDiscount() {
 
   useEffect(() => {
     applyFilters();
-  }, [products, excludeOutOfStock, excludeNotReceived, excludeNoPictures, excludeDiscountAbove, maxDiscountPercent]);
+  }, [
+    products,
+    excludeOutOfStock,
+    excludeNotReceived,
+    excludeNoPictures,
+    excludeDiscountAbove,
+    maxDiscountPercent,
+  ]);
 
   const fetchVendors = async () => {
     try {
-      const token = localStorage.getItem('bridesbyldToken');
-      
+      const token = localStorage.getItem("bridesbyldToken");
+
       if (!token) {
-        navigate('/');
+        navigate("/");
         return;
       }
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-      
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
       const response = await fetch(`${apiBaseUrl}${basePath}/shopify/vendors`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch vendors');
+        throw new Error("Failed to fetch vendors");
       }
 
       const data: string[] = await response.json();
       setVendors(data.sort());
-      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch vendors');
+      setError(err instanceof Error ? err.message : "Failed to fetch vendors");
     }
   };
 
   const fetchCategories = async () => {
     try {
-      const token = localStorage.getItem('bridesbyldToken');
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-      
+      const token = localStorage.getItem("bridesbyldToken");
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
       const response = await fetch(`${apiBaseUrl}${basePath}/shopify/productTypes`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch categories');
+        throw new Error("Failed to fetch categories");
       }
 
       const data: string[] = await response.json();
       setCategories(data.sort());
-      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch categories');
+      setError(err instanceof Error ? err.message : "Failed to fetch categories");
     }
   };
 
@@ -178,29 +183,29 @@ export default function BulkDiscount() {
     const newId = (criteriaLines.length + 1).toString();
     const newLine: CriteriaLine = {
       id: newId,
-      item: '',
-      condition: 'EQUALS',
-      conditionTag: 'CONTAINS',
-      season: '',
-      seasonYear: '',
-      vendor: '',
-      category: '',
-      tagInput: '',
-      operator: 'AND',
+      item: "",
+      condition: "EQUALS",
+      conditionTag: "CONTAINS",
+      season: "",
+      seasonYear: "",
+      vendor: "",
+      category: "",
+      tagInput: "",
+      operator: "AND",
     };
     setCriteriaLines([...criteriaLines, newLine]);
   };
 
   const removeCriteriaLine = (id: string) => {
     if (criteriaLines.length > 1) {
-      setCriteriaLines(criteriaLines.filter(line => line.id !== id));
+      setCriteriaLines(criteriaLines.filter((line) => line.id !== id));
     }
   };
 
   const updateCriteriaLine = (id: string, field: keyof CriteriaLine, value: string) => {
-    setCriteriaLines(criteriaLines.map(line => 
-      line.id === id ? { ...line, [field]: value } : line
-    ));
+    setCriteriaLines(
+      criteriaLines.map((line) => (line.id === id ? { ...line, [field]: value } : line))
+    );
   };
 
   const generateQuery = (): string => {
@@ -212,30 +217,34 @@ export default function BulkDiscount() {
       let itemType = line.item;
       let condition = line.condition;
       let conditionTag = line.conditionTag;
-      let value = '';
-      let querySegment = '';
+      let value = "";
+      let querySegment = "";
 
       switch (itemType) {
-        case 'Category':
-          itemType = 'product_type';
-          value = line.category ? line.category + '*' : '';
-          querySegment = condition === 'EQUALS' ? `${itemType}:'${value}'` : `NOT ${itemType}:'${value}'`;
+        case "Category":
+          itemType = "product_type";
+          value = line.category ? line.category + "*" : "";
+          querySegment =
+            condition === "EQUALS" ? `${itemType}:'${value}'` : `NOT ${itemType}:'${value}'`;
           break;
-        case 'Vendor':
-          itemType = 'vendor';
+        case "Vendor":
+          itemType = "vendor";
           value = line.vendor;
-          querySegment = condition === 'EQUALS' ? `${itemType}:'${value}'` : `NOT ${itemType}:'${value}'`;
+          querySegment =
+            condition === "EQUALS" ? `${itemType}:'${value}'` : `NOT ${itemType}:'${value}'`;
           break;
-        case 'Season':
-          itemType = 'tag';
+        case "Season":
+          itemType = "tag";
           value = line.season + line.seasonYear;
-          querySegment = condition === 'EQUALS' ? `${itemType}:'${value}'` : `NOT ${itemType}:'${value}'`;
+          querySegment =
+            condition === "EQUALS" ? `${itemType}:'${value}'` : `NOT ${itemType}:'${value}'`;
           break;
-        case 'Tag':
-        case 'Title':
+        case "Tag":
+        case "Title":
           itemType = itemType.toLowerCase();
-          value = line.tagInput.trim() + '*';
-          querySegment = conditionTag === 'CONTAINS' ? `${itemType}:'${value}'` : `NOT ${itemType}:'${value}'`;
+          value = line.tagInput.trim() + "*";
+          querySegment =
+            conditionTag === "CONTAINS" ? `${itemType}:'${value}'` : `NOT ${itemType}:'${value}'`;
           break;
       }
 
@@ -263,54 +272,57 @@ export default function BulkDiscount() {
   };
 
   const generateDiscountName = (query: string): string => {
-    let discountName = query.replace(/ /g, '-').replace(/"/g, '');
-    discountName += '-' + Date.now();
+    let discountName = query.replace(/ /g, "-").replace(/"/g, "");
+    discountName += "-" + Date.now();
     return discountName;
   };
 
   const handleGetItems = async () => {
     try {
       setIsLoading(true);
-      setError('');
-      
+      setError("");
+
       const query = generateQuery();
-      const token = localStorage.getItem('bridesbyldToken');
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-      
+      const token = localStorage.getItem("bridesbyldToken");
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
       const response = await fetch(`${apiBaseUrl}${basePath}/shopify/queryBulkDiscountValue`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ queryValue: query }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch products');
+        throw new Error("Failed to fetch products");
       }
 
       const data = await response.json();
-      
+
       if (data.data) {
         const processedProducts = data.data.map((product: any) => {
           const today = new Date();
           const receivedDate = new Date(product.receivedDate);
-          const daysDifference = Math.round((today.getTime() - receivedDate.getTime()) / (1000 * 60 * 60 * 24));
-          
+          const daysDifference = Math.round(
+            (today.getTime() - receivedDate.getTime()) / (1000 * 60 * 60 * 24)
+          );
+
           const firstVariant = product.variants[0];
-          const currentDiscount = firstVariant.compareAtPrice && firstVariant.compareAtPrice !== "0.00"
-            ? ((1 - parseFloat(firstVariant.price) / parseFloat(firstVariant.compareAtPrice)) * 100)
-            : 0;
+          const currentDiscount =
+            firstVariant.compareAtPrice && firstVariant.compareAtPrice !== "0.00"
+              ? (1 - parseFloat(firstVariant.price) / parseFloat(firstVariant.compareAtPrice)) * 100
+              : 0;
 
           // Extract offers from tags
-          const messageTag = product.tags.find((tag: string) => tag.startsWith('Message1:FB0808:'));
-          let offers = 'N/A';
+          const messageTag = product.tags.find((tag: string) => tag.startsWith("Message1:FB0808:"));
+          let offers = "N/A";
           if (messageTag) {
             const match = messageTag.match(/Message1:FB0808:(\d+)%/);
             if (match && match[1]) {
-              offers = match[1] + '%';
+              offers = match[1] + "%";
             }
           }
 
@@ -319,9 +331,9 @@ export default function BulkDiscount() {
             vendor: product.vendor,
             title: product.title,
             handle: product.handle,
-            productImage: product.productImage || '',
+            productImage: product.productImage || "",
             totalInventory: product.totalInventory,
-            productType: product.productType.split(' - ').pop() || product.productType,
+            productType: product.productType.split(" - ").pop() || product.productType,
             receivedDate: product.receivedDate,
             price: parseFloat(firstVariant.price),
             compareAtPrice: parseFloat(firstVariant.compareAtPrice || 0),
@@ -335,13 +347,12 @@ export default function BulkDiscount() {
             daysSinceReceived: daysDifference >= 19660 ? -1 : daysDifference, // -1 for "Not Received"
           };
         });
-        
+
         setProducts(processedProducts);
         setSuccess(`Successfully loaded ${processedProducts.length} products`);
       }
-      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch products');
+      setError(err instanceof Error ? err.message : "Failed to fetch products");
     } finally {
       setIsLoading(false);
     }
@@ -350,7 +361,7 @@ export default function BulkDiscount() {
   const applyFilters = () => {
     let filtered = [...products];
 
-    filtered.forEach(product => {
+    filtered.forEach((product) => {
       let shouldExclude = false;
 
       // Filter by out of stock
@@ -364,7 +375,7 @@ export default function BulkDiscount() {
       }
 
       // Filter by no pictures
-      if (excludeNoPictures && (!product.productImage || product.productImage.trim() === '')) {
+      if (excludeNoPictures && (!product.productImage || product.productImage.trim() === "")) {
         shouldExclude = true;
       }
 
@@ -376,18 +387,18 @@ export default function BulkDiscount() {
       product.excluded = shouldExclude;
     });
 
-    setFilteredProducts(filtered.filter(product => !product.excluded));
+    setFilteredProducts(filtered.filter((product) => !product.excluded));
   };
 
   const handleApplyDiscount = () => {
     if (discountPercent < 0) {
-      setError('Discount percentage cannot be negative');
+      setError("Discount percentage cannot be negative");
       return;
     }
 
     setIsApplyingDiscount(true);
-    
-    const updatedProducts = products.map(product => {
+
+    const updatedProducts = products.map((product) => {
       if (product.excluded) return product;
 
       let newPrice: number;
@@ -423,7 +434,7 @@ export default function BulkDiscount() {
     setProducts(updatedProducts);
     setDiscountApplied(true);
     setIsApplyingDiscount(false);
-    
+
     // Update discount name with sale name
     if (saleName.trim()) {
       const updatedDiscountName = `(${saleName})-${discountName}`;
@@ -432,25 +443,25 @@ export default function BulkDiscount() {
   };
 
   const handleSubmitDiscount = async () => {
-    const eligibleProducts = products.filter(product => !product.excluded);
-    
+    const eligibleProducts = products.filter((product) => !product.excluded);
+
     if (eligibleProducts.length === 0) {
-      setError('No products available for discount application');
+      setError("No products available for discount application");
       return;
     }
 
     if (!discountApplied) {
-      setError('Please apply discount first before submitting');
+      setError("Please apply discount first before submitting");
       return;
     }
 
     try {
       setIsSubmitting(true);
-      setError('');
+      setError("");
 
       const bulkDiscountData = {
         bulkDiscountName: discountName,
-        bulkDiscountProducts: eligibleProducts.map(product => ({
+        bulkDiscountProducts: eligibleProducts.map((product) => ({
           bulkDiscountName: discountName,
           brand: product.vendor,
           title: product.title,
@@ -461,68 +472,69 @@ export default function BulkDiscount() {
           originalComparedAt: product.compareAtPrice || null,
           newPrice: product.newPrice,
           newComparedAt: product.newCompareAt || null,
-          variants: product.variants.join(','),
-          tagsToAdd: saleName.trim() ? `SeasonDiscount, OnSale, Message1:FB0808:${saleName}` : 'SeasonDiscount, OnSale',
-          tagsToRemove: product.tags.filter(tag => tag.includes('Message1:FB0808:')).join(','),
+          variants: product.variants.join(","),
+          tagsToAdd: saleName.trim()
+            ? `SeasonDiscount, OnSale, Message1:FB0808:${saleName}`
+            : "SeasonDiscount, OnSale",
+          tagsToRemove: product.tags.filter((tag) => tag.includes("Message1:FB0808:")).join(","),
         })),
       };
 
-      const token = localStorage.getItem('bridesbyldToken');
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-      
+      const token = localStorage.getItem("bridesbyldToken");
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
       const response = await fetch(`${apiBaseUrl}${basePath}/shopify/bulkDiscountItems`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(bulkDiscountData),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to apply bulk discount');
+        throw new Error("Failed to apply bulk discount");
       }
 
       const result = await response.json();
       setSuccess(`Successfully applied discount to ${eligibleProducts.length} products`);
-      
+
       // Reset form
       setProducts([]);
       setDiscountApplied(false);
       setDiscountPercent(0);
-      setDiscountName('');
-      setSaleName('');
-      
+      setDiscountName("");
+      setSaleName("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to apply bulk discount');
+      setError(err instanceof Error ? err.message : "Failed to apply bulk discount");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 2,
     }).format(amount);
   };
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric'
+    return date.toLocaleDateString("en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      year: "numeric",
     });
   };
 
   // Table columns
   const columns: Column[] = [
     {
-      key: 'excluded',
-      header: 'Exclude',
+      key: "excluded",
+      header: "Exclude",
       render: (value, _, index) => (
         <input
           type="checkbox"
@@ -535,21 +547,21 @@ export default function BulkDiscount() {
           className="rounded border-slate-300 text-purple-600 focus:ring-purple-500"
         />
       ),
-      className: 'text-center'
+      className: "text-center",
     },
     {
-      key: 'vendor',
-      header: 'Brand',
+      key: "vendor",
+      header: "Brand",
       render: (value) => (
         <div className="flex items-center space-x-2">
           <Building2 className="w-4 h-4 text-slate-400" />
           <span>{value}</span>
         </div>
-      )
+      ),
     },
     {
-      key: 'title',
-      header: 'Title',
+      key: "title",
+      header: "Title",
       render: (value, product) => (
         <a
           href={`https://loladre.com/products/${product.handle}`}
@@ -560,11 +572,11 @@ export default function BulkDiscount() {
         >
           {value}
         </a>
-      )
+      ),
     },
     {
-      key: 'productImage',
-      header: 'Image',
+      key: "productImage",
+      header: "Image",
       render: (value) => (
         <div className="flex justify-center">
           {value ? (
@@ -580,96 +592,96 @@ export default function BulkDiscount() {
           )}
         </div>
       ),
-      className: 'text-center'
+      className: "text-center",
     },
     {
-      key: 'totalInventory',
-      header: 'QOH',
+      key: "totalInventory",
+      header: "QOH",
       render: (value) => (
-        <span className={value <= 0 ? 'text-red-600 font-semibold' : ''}>{value}</span>
+        <span className={value <= 0 ? "text-red-600 font-semibold" : ""}>{value}</span>
       ),
-      className: 'text-center'
+      className: "text-center",
     },
     {
-      key: 'productType',
-      header: 'Category',
+      key: "productType",
+      header: "Category",
       render: (value) => (
         <div className="flex items-center space-x-2">
           <Tag className="w-4 h-4 text-slate-400" />
           <span className="text-sm">{value}</span>
         </div>
-      )
+      ),
     },
     {
-      key: 'daysSinceReceived',
-      header: 'Days',
+      key: "daysSinceReceived",
+      header: "Days",
       render: (value) => (
-        <span className={value === -1 ? 'text-orange-600 font-semibold' : ''}>
-          {value === -1 ? 'Not Received' : value.toString()}
+        <span className={value === -1 ? "text-orange-600 font-semibold" : ""}>
+          {value === -1 ? "Not Received" : value.toString()}
         </span>
       ),
-      className: 'text-center'
+      className: "text-center",
     },
     {
-      key: 'price',
-      header: 'Price',
+      key: "price",
+      header: "Price",
       render: (value) => formatCurrency(value),
-      className: 'text-right'
+      className: "text-right",
     },
     {
-      key: 'compareAtPrice',
-      header: 'Compared@',
-      render: (value) => value > 0 ? formatCurrency(value) : 'N/A',
-      className: 'text-right'
+      key: "compareAtPrice",
+      header: "Compared@",
+      render: (value) => (value > 0 ? formatCurrency(value) : "N/A"),
+      className: "text-right",
     },
     {
-      key: 'currentDiscount',
-      header: 'Discount',
+      key: "currentDiscount",
+      header: "Discount",
       render: (value) => (
-        <span className={value > 0 ? 'text-red-600 font-semibold' : ''}>
-          {value > 0 ? `${value.toFixed(2)}%` : '0%'}
+        <span className={value > 0 ? "text-red-600 font-semibold" : ""}>
+          {value > 0 ? `${value.toFixed(2)}%` : "0%"}
         </span>
       ),
-      className: 'text-center'
+      className: "text-center",
     },
     {
-      key: 'offers',
-      header: 'Offers',
+      key: "offers",
+      header: "Offers",
       render: (value) => (
-        <span className={value !== 'N/A' ? 'text-blue-600 font-semibold' : 'text-slate-400'}>
+        <span className={value !== "N/A" ? "text-blue-600 font-semibold" : "text-slate-400"}>
           {value}
         </span>
       ),
-      className: 'text-center'
+      className: "text-center",
     },
     {
-      key: 'newPrice',
-      header: 'New Price',
+      key: "newPrice",
+      header: "New Price",
       render: (value) => (
-        <span className={value > 0 ? 'text-green-600 font-semibold' : ''}>
-          {value > 0 ? formatCurrency(value) : '-'}
+        <span className={value > 0 ? "text-green-600 font-semibold" : ""}>
+          {value > 0 ? formatCurrency(value) : "-"}
         </span>
       ),
-      className: 'text-right'
+      className: "text-right",
     },
     {
-      key: 'newCompareAt',
-      header: 'New Compared@',
+      key: "newCompareAt",
+      header: "New Compared@",
       render: (value) => (
-        <span className={value > 0 ? 'text-green-600 font-semibold' : ''}>
-          {value > 0 ? formatCurrency(value) : 'N/A'}
+        <span className={value > 0 ? "text-green-600 font-semibold" : ""}>
+          {value > 0 ? formatCurrency(value) : "N/A"}
         </span>
       ),
-      className: 'text-right'
-    }
+      className: "text-right",
+    },
   ];
 
   // Season options
   const seasonOptions = [
-    { value: 'resort', label: 'Resort' },
-    { value: 'spring', label: 'Spring' },
-    { value: 'summer', label: 'Summer' },
-    { value: 'fall', label: 'Fall' }
+    { value: "resort", label: "Resort" },
+    { value: "spring", label: "Spring" },
+    { value: "summer", label: "Summer" },
+    { value: "fall", label: "Fall" },
   ];
 
   // Year options
@@ -680,7 +692,7 @@ export default function BulkDiscount() {
 
   // Calculate statistics
   const totalProducts = products.length;
-  const excludedProducts = products.filter(p => p.excluded).length;
+  const excludedProducts = products.filter((p) => p.excluded).length;
   const eligibleProducts = totalProducts - excludedProducts;
   const totalValue = filteredProducts.reduce((sum, product) => sum + product.price, 0);
 
@@ -691,27 +703,30 @@ export default function BulkDiscount() {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">
-              Bulk Discount: <span className="text-purple-600">{generatedSeason || 'Build Query'}</span>
+              Bulk Discount:{" "}
+              <span className="text-purple-600">{generatedSeason || "Build Query"}</span>
             </h1>
-            <p className="text-slate-600 mt-1">Apply discounts to multiple products based on criteria</p>
+            <p className="text-slate-600 mt-1">
+              Apply discounts to multiple products based on criteria
+            </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-5 space-y-6">
             {/* Query Builder */}
             <Card>
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-900">Product Selection Criteria</h3>
-                
+
                 {criteriaLines.map((line, index) => (
                   <div key={line.id} className="space-y-3">
                     {index > 0 && (
                       <div className="flex items-center space-x-2">
                         <select
-                          value={line.operator || 'AND'}
-                          onChange={(e) => updateCriteriaLine(line.id, 'operator', e.target.value)}
+                          value={line.operator || "AND"}
+                          onChange={(e) => updateCriteriaLine(line.id, "operator", e.target.value)}
                           className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                         >
                           <option value="AND">AND</option>
@@ -719,11 +734,11 @@ export default function BulkDiscount() {
                         </select>
                       </div>
                     )}
-                    
+
                     <div className="flex items-center space-x-3 flex-wrap gap-2">
                       <select
                         value={line.item}
-                        onChange={(e) => updateCriteriaLine(line.id, 'item', e.target.value)}
+                        onChange={(e) => updateCriteriaLine(line.id, "item", e.target.value)}
                         className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                       >
                         <option value="">--Select Item--</option>
@@ -735,10 +750,10 @@ export default function BulkDiscount() {
                       </select>
 
                       {/* Condition dropdown for non-tag/title items */}
-                      {line.item && !['Tag', 'Title'].includes(line.item) && (
+                      {line.item && !["Tag", "Title"].includes(line.item) && (
                         <select
                           value={line.condition}
-                          onChange={(e) => updateCriteriaLine(line.id, 'condition', e.target.value)}
+                          onChange={(e) => updateCriteriaLine(line.id, "condition", e.target.value)}
                           className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                         >
                           <option value="EQUALS">EQUALS</option>
@@ -747,10 +762,12 @@ export default function BulkDiscount() {
                       )}
 
                       {/* Condition dropdown for tag/title items */}
-                      {line.item && ['Tag', 'Title'].includes(line.item) && (
+                      {line.item && ["Tag", "Title"].includes(line.item) && (
                         <select
                           value={line.conditionTag}
-                          onChange={(e) => updateCriteriaLine(line.id, 'conditionTag', e.target.value)}
+                          onChange={(e) =>
+                            updateCriteriaLine(line.id, "conditionTag", e.target.value)
+                          }
                           className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                         >
                           <option value="CONTAINS">CONTAINS</option>
@@ -759,78 +776,84 @@ export default function BulkDiscount() {
                       )}
 
                       {/* Season dropdowns */}
-                      {line.item === 'Season' && (
+                      {line.item === "Season" && (
                         <>
                           <select
                             value={line.season}
-                            onChange={(e) => updateCriteriaLine(line.id, 'season', e.target.value)}
+                            onChange={(e) => updateCriteriaLine(line.id, "season", e.target.value)}
                             className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                           >
                             <option value="">--Select Season--</option>
-                            {seasonOptions.map(option => (
-                              <option key={option.value} value={option.value}>{option.label}</option>
+                            {seasonOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
                             ))}
                           </select>
                           <select
                             value={line.seasonYear}
-                            onChange={(e) => updateCriteriaLine(line.id, 'seasonYear', e.target.value)}
+                            onChange={(e) =>
+                              updateCriteriaLine(line.id, "seasonYear", e.target.value)
+                            }
                             className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                           >
                             <option value="">--Select Year--</option>
-                            {yearOptions.map(option => (
-                              <option key={option.value} value={option.value}>{option.label}</option>
+                            {yearOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
                             ))}
                           </select>
                         </>
                       )}
 
                       {/* Vendor dropdown */}
-                      {line.item === 'Vendor' && (
+                      {line.item === "Vendor" && (
                         <select
                           value={line.vendor}
-                          onChange={(e) => updateCriteriaLine(line.id, 'vendor', e.target.value)}
+                          onChange={(e) => updateCriteriaLine(line.id, "vendor", e.target.value)}
                           className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                         >
                           <option value="">Any Brand</option>
-                          {vendors.map(vendor => (
-                            <option key={vendor} value={vendor}>{vendor}</option>
+                          {vendors.map((vendor) => (
+                            <option key={vendor} value={vendor}>
+                              {vendor}
+                            </option>
                           ))}
                         </select>
                       )}
 
                       {/* Category dropdown */}
-                      {line.item === 'Category' && (
+                      {line.item === "Category" && (
                         <select
                           value={line.category}
-                          onChange={(e) => updateCriteriaLine(line.id, 'category', e.target.value)}
+                          onChange={(e) => updateCriteriaLine(line.id, "category", e.target.value)}
                           className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                         >
                           <option value="">Any Category</option>
-                          {categories.map(category => (
-                            <option key={category} value={category}>{category}</option>
+                          {categories.map((category) => (
+                            <option key={category} value={category}>
+                              {category}
+                            </option>
                           ))}
                         </select>
                       )}
 
                       {/* Tag/Title input */}
-                      {line.item && ['Tag', 'Title'].includes(line.item) && (
+                      {line.item && ["Tag", "Title"].includes(line.item) && (
                         <Input
                           type="text"
                           value={line.tagInput}
-                          onChange={(e) => updateCriteriaLine(line.id, 'tagInput', e.target.value)}
+                          onChange={(e) => updateCriteriaLine(line.id, "tagInput", e.target.value)}
                           placeholder={`Enter ${line.item.toLowerCase()}...`}
                           className="flex-1 min-w-48"
                         />
                       )}
 
-                      <Button
-                        onClick={addCriteriaLine}
-                        size="sm"
-                        variant="outline"
-                      >
+                      <Button onClick={addCriteriaLine} size="sm" variant="outline">
                         <Plus className="w-4 h-4" />
                       </Button>
-                      
+
                       {criteriaLines.length > 1 && (
                         <Button
                           onClick={() => removeCriteriaLine(line.id)}
@@ -848,7 +871,7 @@ export default function BulkDiscount() {
                   <Button
                     onClick={handleGetItems}
                     isLoading={isLoading}
-                    disabled={!criteriaLines.some(line => line.item)}
+                    disabled={!criteriaLines.some((line) => line.item)}
                   >
                     <Search className="w-4 h-4 mr-2" />
                     Get Items
@@ -863,11 +886,7 @@ export default function BulkDiscount() {
                 <div className="flex items-center space-x-2 text-red-700">
                   <AlertTriangle className="w-5 h-5" />
                   <span>{error}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setError('')}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setError("")}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -879,11 +898,7 @@ export default function BulkDiscount() {
                 <div className="flex items-center space-x-2 text-green-700">
                   <CheckCircle className="w-5 h-5" />
                   <span>{success}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSuccess('')}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setSuccess("")}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -977,7 +992,9 @@ export default function BulkDiscount() {
                                 max="100"
                                 step="0.1"
                                 value={maxDiscountPercent}
-                                onChange={(e) => setMaxDiscountPercent(parseFloat(e.target.value) || 0)}
+                                onChange={(e) =>
+                                  setMaxDiscountPercent(parseFloat(e.target.value) || 0)
+                                }
                                 className="w-24"
                               />
                               <span className="text-sm text-slate-600">%</span>
@@ -1078,8 +1095,12 @@ export default function BulkDiscount() {
             {products.length === 0 && !isLoading && (
               <Card className="text-center py-12">
                 <Percent className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">Build Your Product Query</h3>
-                <p className="text-slate-600 mb-6">Use the criteria builder above to select products for bulk discount application.</p>
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                  Build Your Product Query
+                </h3>
+                <p className="text-slate-600 mb-6">
+                  Use the criteria builder above to select products for bulk discount application.
+                </p>
                 <div className="text-sm text-slate-500">
                   Features available:
                   <ul className="mt-2 space-y-1">

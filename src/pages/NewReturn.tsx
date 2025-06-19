@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Layout from '../components/Layout';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
-import FormField from '../components/ui/FormField';
-import DataTable, { Column } from '../components/ui/DataTable';
-import ServerMessagePanel from '../components/ui/ServerMessagePanel';
-import { 
-  RotateCcw, 
-  Package, 
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import Layout from "../components/Layout";
+import Card from "../components/ui/Card";
+import Button from "../components/ui/Button";
+import Input from "../components/ui/Input";
+import FormField from "../components/ui/FormField";
+import DataTable, { Column } from "../components/ui/DataTable";
+import ServerMessagePanel from "../components/ui/ServerMessagePanel";
+import {
+  RotateCcw,
+  Package,
   Building2,
   Calendar,
   DollarSign,
@@ -24,8 +24,8 @@ import {
   ShoppingCart,
   Hash,
   Eye,
-  CheckCircle
-} from 'lucide-react';
+  CheckCircle,
+} from "lucide-react";
 
 interface ReturnProduct {
   productName: string;
@@ -61,33 +61,33 @@ interface ReturnFile {
 export default function NewReturn() {
   const navigate = useNavigate();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Form state
-  const [selectedVendor, setSelectedVendor] = useState<string>('');
-  const [createdDate, setCreatedDate] = useState<string>('');
-  const [notes, setNotes] = useState<string>('');
+  const [selectedVendor, setSelectedVendor] = useState<string>("");
+  const [createdDate, setCreatedDate] = useState<string>("");
+  const [notes, setNotes] = useState<string>("");
   const [returnProducts, setReturnProducts] = useState<ReturnProduct[]>([]);
   const [returnCredits, setReturnCredits] = useState<ReturnCredit[]>([]);
   const [returnFiles, setReturnFiles] = useState<ReturnFile[]>([]);
-  
+
   // UI state
   const [vendors, setVendors] = useState<string[]>([]);
   const [isBarcodeEnabled, setIsBarcodeEnabled] = useState(false);
-  const [barcodeValue, setBarcodeValue] = useState<string>('');
+  const [barcodeValue, setBarcodeValue] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  
+
   // Generate return order ID
   const [returnOrderId] = useState<string>(`${Date.now()}-RT`);
 
   useEffect(() => {
     fetchVendors();
     // Set today's date as default
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
     setCreatedDate(today);
   }, []);
 
@@ -99,82 +99,84 @@ export default function NewReturn() {
 
   const fetchVendors = async () => {
     try {
-      const token = localStorage.getItem('bridesbyldToken');
-      
+      const token = localStorage.getItem("bridesbyldToken");
+
       if (!token) {
-        navigate('/');
+        navigate("/");
         return;
       }
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-      
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
       const response = await fetch(`${apiBaseUrl}${basePath}/shopify/vendors`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch vendors');
+        throw new Error("Failed to fetch vendors");
       }
 
       const data: string[] = await response.json();
       setVendors(data.sort());
-      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     }
   };
 
   const handleBarcodeSubmit = async (barcode: string) => {
     if (!barcode.trim() || !selectedVendor) {
-      setError('Please select a vendor and scan a valid barcode');
+      setError("Please select a vendor and scan a valid barcode");
       return;
     }
 
     try {
       setIsLoading(true);
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-      
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/getInformationByBarcode?barcode=${barcode}`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
+      const response = await fetch(
+        `${apiBaseUrl}${basePath}/shopify/getInformationByBarcode?barcode=${barcode}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (!response.ok) {
-        throw new Error('Product not found');
+        throw new Error("Product not found");
       }
 
       const data = await response.json();
 
       // Check if brand matches selected vendor
       if (data.brand.trim() !== selectedVendor.trim()) {
-        setError('Brand does not match selected vendor');
+        setError("Brand does not match selected vendor");
         return;
       }
 
       // Check if product has received quantity
       if (data.variantQuantityReceived < 1) {
-        setError('Cannot add item with quantity received less than or equal to 0');
+        setError("Cannot add item with quantity received less than or equal to 0");
         return;
       }
 
       // Check if product already exists in return list
       const existingProductIndex = returnProducts.findIndex(
-        product => product.variantBarcode === data.variantBarcode
+        (product) => product.variantBarcode === data.variantBarcode
       );
 
       if (existingProductIndex !== -1) {
         // Increment quantity if product exists
         const updatedProducts = [...returnProducts];
         const existingProduct = updatedProducts[existingProductIndex];
-        
+
         if (existingProduct.qtyToReturn + 1 > data.variantQuantityReceived) {
-          setError('QTY to return exceeds the total received quantity');
+          setError("QTY to return exceeds the total received quantity");
           return;
         }
 
@@ -204,17 +206,16 @@ export default function NewReturn() {
         setReturnProducts([...returnProducts, newProduct]);
       }
 
-      setBarcodeValue('');
-      
+      setBarcodeValue("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch product information');
+      setError(err instanceof Error ? err.message : "Failed to fetch product information");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleBarcodeKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleBarcodeSubmit(barcodeValue);
     }
   };
@@ -227,12 +228,12 @@ export default function NewReturn() {
   const updateProductQuantity = (index: number, newQty: number) => {
     const updatedProducts = [...returnProducts];
     const product = updatedProducts[index];
-    
+
     if (newQty > product.variantQuantityReceived) {
-      setError('QTY to return exceeds the total received quantity');
+      setError("QTY to return exceeds the total received quantity");
       return;
     }
-    
+
     if (newQty < 1) {
       removeProduct(index);
       return;
@@ -244,11 +245,11 @@ export default function NewReturn() {
   };
 
   const addCredit = () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
     const newCredit: ReturnCredit = {
       creditDate: today,
-      creditDescription: '',
-      creditMethod: 'Cash',
+      creditDescription: "",
+      creditMethod: "Cash",
       creditAmount: 0,
     };
     setReturnCredits([...returnCredits, newCredit]);
@@ -271,34 +272,33 @@ export default function NewReturn() {
     try {
       setIsUploading(true);
       const formData = new FormData();
-      
-      Array.from(selectedFiles).forEach(file => {
-        formData.append('files', file);
+
+      Array.from(selectedFiles).forEach((file) => {
+        formData.append("files", file);
       });
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-      
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
       const response = await fetch(`${apiBaseUrl}${basePath}/uploadfiles/invoicesAndOrders`, {
-        method: 'POST',
+        method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error('Failed to upload files');
+        throw new Error("Failed to upload files");
       }
 
       const data = await response.json();
       const newFiles: ReturnFile[] = data.filePaths.map((path: string) => ({
-        fileName: path.split('/').pop() || '',
+        fileName: path.split("/").pop() || "",
         filePath: path,
       }));
 
       setReturnFiles([...returnFiles, ...newFiles]);
       setSelectedFiles(null);
-      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload files');
+      setError(err instanceof Error ? err.message : "Failed to upload files");
     } finally {
       setIsUploading(false);
     }
@@ -306,21 +306,21 @@ export default function NewReturn() {
 
   const handleCreateReturn = async () => {
     if (!selectedVendor || !createdDate || returnProducts.length === 0) {
-      setError('Please fill in all required fields and add at least one product');
+      setError("Please fill in all required fields and add at least one product");
       return;
     }
 
     try {
       setIsCreating(true);
-      const token = localStorage.getItem('bridesbyldToken');
-      
+      const token = localStorage.getItem("bridesbyldToken");
+
       const subTotal = returnProducts.reduce((sum, product) => sum + product.lineTotal, 0);
       const creditTotal = returnCredits.reduce((sum, credit) => sum + credit.creditAmount, 0);
       const grandTotal = subTotal - creditTotal;
 
       // Group products by original PO for credits
       const originalPOTracker: { [key: string]: any } = {};
-      returnProducts.forEach(product => {
+      returnProducts.forEach((product) => {
         if (originalPOTracker[product.variantOriginalPO]) {
           originalPOTracker[product.variantOriginalPO].creditAmount += product.lineTotal;
         } else {
@@ -351,27 +351,26 @@ export default function NewReturn() {
         originalPurchaseOrder: originalPurchaseOrder,
       };
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || '';
-      
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+
       const response = await fetch(`${apiBaseUrl}${basePath}/shopify/createReturnToVendor`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(returnData),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create return');
+        throw new Error("Failed to create return");
       }
 
       // Navigate to return detail page or return list
       navigate(`/return-list`);
-      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create return');
+      setError(err instanceof Error ? err.message : "Failed to create return");
     } finally {
       setIsCreating(false);
       setShowConfirmModal(false);
@@ -379,9 +378,9 @@ export default function NewReturn() {
   };
 
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 2,
     }).format(amount);
   };
@@ -389,60 +388,60 @@ export default function NewReturn() {
   // Product table columns
   const productColumns: Column[] = [
     {
-      key: 'productName',
-      header: 'Name',
-      render: (value) => <span className="font-medium">{value}</span>
+      key: "productName",
+      header: "Name",
+      render: (value) => <span className="font-medium">{value}</span>,
     },
     {
-      key: 'brand',
-      header: 'Brand',
+      key: "brand",
+      header: "Brand",
       render: (value) => (
         <div className="flex items-center space-x-2">
           <Building2 className="w-4 h-4 text-slate-400" />
           <span>{value}</span>
         </div>
-      )
+      ),
     },
     {
-      key: 'variantColor',
-      header: 'Color',
+      key: "variantColor",
+      header: "Color",
     },
     {
-      key: 'variantSize',
-      header: 'Size',
+      key: "variantSize",
+      header: "Size",
     },
     {
-      key: 'variantQuantityReceived',
-      header: 'QTY Available',
-      className: 'text-center',
+      key: "variantQuantityReceived",
+      header: "QTY Available",
+      className: "text-center",
     },
     {
-      key: 'variantCost',
-      header: 'Cost',
+      key: "variantCost",
+      header: "Cost",
       render: (value) => formatCurrency(value),
-      className: 'text-right',
+      className: "text-right",
     },
     {
-      key: 'variantRetail',
-      header: 'Retail',
+      key: "variantRetail",
+      header: "Retail",
       render: (value) => formatCurrency(value),
-      className: 'text-right',
+      className: "text-right",
     },
     {
-      key: 'variantSku',
-      header: 'SKU',
+      key: "variantSku",
+      header: "SKU",
     },
     {
-      key: 'variantBarcode',
-      header: 'Barcode',
+      key: "variantBarcode",
+      header: "Barcode",
     },
     {
-      key: 'productType',
-      header: 'P-Type',
+      key: "productType",
+      header: "P-Type",
     },
     {
-      key: 'qtyToReturn',
-      header: 'QTY to Return',
+      key: "qtyToReturn",
+      header: "QTY to Return",
       render: (value, row, index) => (
         <Input
           type="number"
@@ -453,28 +452,24 @@ export default function NewReturn() {
           className="w-20 text-center"
         />
       ),
-      className: 'text-center',
+      className: "text-center",
     },
     {
-      key: 'lineTotal',
-      header: 'Total',
+      key: "lineTotal",
+      header: "Total",
       render: (value) => <span className="font-semibold">{formatCurrency(value)}</span>,
-      className: 'text-right',
+      className: "text-right",
     },
     {
-      key: 'actions',
-      header: 'Del.',
+      key: "actions",
+      header: "Del.",
       render: (_, __, index) => (
-        <Button
-          variant="danger"
-          size="sm"
-          onClick={() => removeProduct(index!)}
-        >
+        <Button variant="danger" size="sm" onClick={() => removeProduct(index!)}>
           <X className="w-4 h-4" />
         </Button>
       ),
-      className: 'text-center',
-    }
+      className: "text-center",
+    },
   ];
 
   // Calculate totals
@@ -496,9 +491,9 @@ export default function NewReturn() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-5 space-y-6">
             {/* Basic Information */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
@@ -510,8 +505,10 @@ export default function NewReturn() {
                       className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                     >
                       <option value="">Choose...</option>
-                      {vendors.map(vendor => (
-                        <option key={vendor} value={vendor}>{vendor}</option>
+                      {vendors.map((vendor) => (
+                        <option key={vendor} value={vendor}>
+                          {vendor}
+                        </option>
                       ))}
                     </select>
                   </FormField>
@@ -535,14 +532,14 @@ export default function NewReturn() {
                     <div className="flex space-x-2">
                       <Button
                         onClick={() => setIsBarcodeEnabled(true)}
-                        variant={isBarcodeEnabled ? 'primary' : 'outline'}
+                        variant={isBarcodeEnabled ? "primary" : "outline"}
                         size="sm"
                       >
                         Add Items
                       </Button>
                       <Button
                         onClick={() => setIsBarcodeEnabled(false)}
-                        variant={!isBarcodeEnabled ? 'primary' : 'outline'}
+                        variant={!isBarcodeEnabled ? "primary" : "outline"}
                         size="sm"
                       >
                         Finished Adding
@@ -571,11 +568,7 @@ export default function NewReturn() {
                 <div className="flex items-center space-x-2 text-red-700">
                   <AlertTriangle className="w-5 h-5" />
                   <span>{error}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setError('')}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setError("")}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -610,26 +603,31 @@ export default function NewReturn() {
                 ) : (
                   <div className="space-y-3">
                     {returnCredits.map((credit, index) => (
-                      <Card key={index} className="border-2 border-dashed border-blue-200 bg-blue-50">
+                      <Card
+                        key={index}
+                        className="border-2 border-dashed border-blue-200 bg-blue-50"
+                      >
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                           <FormField label="Date">
                             <Input
                               type="date"
                               value={credit.creditDate}
-                              onChange={(e) => updateCredit(index, 'creditDate', e.target.value)}
+                              onChange={(e) => updateCredit(index, "creditDate", e.target.value)}
                             />
                           </FormField>
                           <FormField label="Description">
                             <Input
                               value={credit.creditDescription}
-                              onChange={(e) => updateCredit(index, 'creditDescription', e.target.value)}
+                              onChange={(e) =>
+                                updateCredit(index, "creditDescription", e.target.value)
+                              }
                               placeholder="Credit description"
                             />
                           </FormField>
                           <FormField label="Method">
                             <select
                               value={credit.creditMethod}
-                              onChange={(e) => updateCredit(index, 'creditMethod', e.target.value)}
+                              onChange={(e) => updateCredit(index, "creditMethod", e.target.value)}
                               className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                             >
                               <option value="Cash">Cash</option>
@@ -642,7 +640,13 @@ export default function NewReturn() {
                                 type="number"
                                 step="0.01"
                                 value={credit.creditAmount}
-                                onChange={(e) => updateCredit(index, 'creditAmount', parseFloat(e.target.value) || 0)}
+                                onChange={(e) =>
+                                  updateCredit(
+                                    index,
+                                    "creditAmount",
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
                                 placeholder="0.00"
                               />
                               <Button
@@ -728,7 +732,7 @@ export default function NewReturn() {
               <Card>
                 <div className="space-y-4">
                   <h4 className="text-lg font-semibold text-slate-900">Return Totals</h4>
-                  
+
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-slate-600">Sub-Total:</span>
@@ -767,9 +771,12 @@ export default function NewReturn() {
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                 <Card className="max-w-md w-full mx-4">
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-slate-900">Confirm Return Creation</h3>
+                    <h3 className="text-lg font-semibold text-slate-900">
+                      Confirm Return Creation
+                    </h3>
                     <p className="text-slate-600">
-                      You are returning {totalQtyToReturn} items to vendor, and reducing the same number from inventory.
+                      You are returning {totalQtyToReturn} items to vendor, and reducing the same
+                      number from inventory.
                     </p>
                     <div className="flex space-x-3">
                       <Button

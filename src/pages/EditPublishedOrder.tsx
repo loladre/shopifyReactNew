@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import Layout from '../components/Layout';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
-import FormField from '../components/ui/FormField';
-import ServerMessagePanel from '../components/ui/ServerMessagePanel';
-import { 
-  FileText, 
-  Building2, 
-  Calendar, 
-  DollarSign, 
+import React, { useState, useEffect, useRef } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import Layout from "../components/Layout";
+import Card from "../components/ui/Card";
+import Button from "../components/ui/Button";
+import Input from "../components/ui/Input";
+import FormField from "../components/ui/FormField";
+import ServerMessagePanel from "../components/ui/ServerMessagePanel";
+import {
+  FileText,
+  Building2,
+  Calendar,
+  DollarSign,
   Package,
   AlertTriangle,
   CheckCircle,
@@ -25,8 +25,8 @@ import {
   TrendingUp,
   CheckSquare,
   Square,
-  Trash2
-} from 'lucide-react';
+  Trash2,
+} from "lucide-react";
 
 interface ProductVariant {
   variantColor: string;
@@ -119,7 +119,7 @@ export default function EditPublishedOrder() {
   const [credits, setCredits] = useState<Credit[]>([]);
   const [files, setFiles] = useState<OrderFile[]>([]);
   const [vendors, setVendors] = useState<string[]>([]);
-  
+
   // Edit states
   const [isEditingSeason, setIsEditingSeason] = useState(false);
   const [isEditingCancelDate, setIsEditingCancelDate] = useState(false);
@@ -129,7 +129,7 @@ export default function EditPublishedOrder() {
   const [newCancelDate, setNewCancelDate] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
   const [receiveComplete, setReceiveComplete] = useState(false);
-  
+
   // UI state
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -143,7 +143,7 @@ export default function EditPublishedOrder() {
     subTotal: 0,
     paymentTotal: 0,
     creditTotal: 0,
-    grandTotal: 0
+    grandTotal: 0,
   });
 
   useEffect(() => {
@@ -164,7 +164,7 @@ export default function EditPublishedOrder() {
     try {
       setIsLoading(true);
       const token = localStorage.getItem("bridesbyldToken");
-      
+
       if (!token) {
         navigate("/");
         return;
@@ -172,13 +172,16 @@ export default function EditPublishedOrder() {
 
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
       const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
-      
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/getPublishedOrderById/${purchaseOrderId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+
+      const response = await fetch(
+        `${apiBaseUrl}${basePath}/shopify/getPublishedOrderById/${purchaseOrderId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -198,13 +201,12 @@ export default function EditPublishedOrder() {
       setReceiveComplete(data.purchaseOrderCompleteReceive);
       setAdditionalNotes(data.purchaseOrderNotes);
       setNewCancelDate(data.completedDate);
-      
+
       // Parse season for editing
       const seasonParts = parseSeason(data.purchaseOrderSeason);
       setNewSeason(seasonParts.season);
       setNewBrandSeason(seasonParts.brand);
       setNewYearSeason(seasonParts.year);
-      
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -217,11 +219,11 @@ export default function EditPublishedOrder() {
       const token = localStorage.getItem("bridesbyldToken");
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
       const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
-      
+
       const response = await fetch(`${apiBaseUrl}${basePath}/shopify/vendors`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
 
@@ -231,7 +233,6 @@ export default function EditPublishedOrder() {
 
       const data: string[] = await response.json();
       setVendors(data.sort());
-      
     } catch (err) {
       console.error("Failed to fetch vendors:", err);
     }
@@ -242,16 +243,16 @@ export default function EditPublishedOrder() {
     let season = "Fall";
     let brand = "";
     let year = "26";
-    
+
     // Common seasons to check for
     const seasons = ["Resort", "Spring", "Summer", "Fall", "Personal", "Consignment"];
-    
+
     // Try to extract season
     for (const s of seasons) {
       if (seasonString.startsWith(s)) {
         season = s;
         const remainder = seasonString.substring(s.length).trim();
-        
+
         // Check if there's a year at the end (2 digits)
         const yearMatch = remainder.match(/(\d{2})$/);
         if (yearMatch) {
@@ -265,7 +266,7 @@ export default function EditPublishedOrder() {
         break;
       }
     }
-    
+
     return { season, brand, year };
   };
 
@@ -278,26 +279,29 @@ export default function EditPublishedOrder() {
 
   const handleSaveSeason = async () => {
     if (!order) return;
-    
+
     const oldSeason = order.purchaseOrderSeason;
     const updatedSeason = constructSeason();
-    
+
     try {
       const token = localStorage.getItem("bridesbyldToken");
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
       const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
-      
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/updateSeason/${order.purchaseOrderID}`, {
-        method: "POST",
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          updatedNewSeason: updatedSeason,
-          oldSeason: oldSeason,
-        }),
-      });
+
+      const response = await fetch(
+        `${apiBaseUrl}${basePath}/shopify/updateSeason/${order.purchaseOrderID}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            updatedNewSeason: updatedSeason,
+            oldSeason: oldSeason,
+          }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to update season");
@@ -305,12 +309,11 @@ export default function EditPublishedOrder() {
 
       setOrder({
         ...order,
-        purchaseOrderSeason: updatedSeason
+        purchaseOrderSeason: updatedSeason,
       });
-      
+
       setIsEditingSeason(false);
       setSuccess("Season updated successfully");
-      
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update season");
     }
@@ -318,22 +321,25 @@ export default function EditPublishedOrder() {
 
   const handleSaveCancelDate = async () => {
     if (!order) return;
-    
+
     try {
       const token = localStorage.getItem("bridesbyldToken");
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
       const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
-      
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/updateCancelDate/${order.purchaseOrderID}`, {
-        method: "POST",
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          cancelDate: newCancelDate,
-        }),
-      });
+
+      const response = await fetch(
+        `${apiBaseUrl}${basePath}/shopify/updateCancelDate/${order.purchaseOrderID}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            cancelDate: newCancelDate,
+          }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to update cancel date");
@@ -341,12 +347,11 @@ export default function EditPublishedOrder() {
 
       setOrder({
         ...order,
-        completedDate: newCancelDate
+        completedDate: newCancelDate,
       });
-      
+
       setIsEditingCancelDate(false);
       setSuccess("Cancel date updated successfully");
-      
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update cancel date");
     }
@@ -354,19 +359,19 @@ export default function EditPublishedOrder() {
 
   const handleFileUpload = async () => {
     if (!selectedFiles || selectedFiles.length === 0) return;
-    
+
     try {
       setIsUploading(true);
       const formData = new FormData();
-      
-      Array.from(selectedFiles).forEach(file => {
-        formData.append('files', file);
+
+      Array.from(selectedFiles).forEach((file) => {
+        formData.append("files", file);
       });
 
       const token = localStorage.getItem("bridesbyldToken");
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
       const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
-      
+
       const response = await fetch(`${apiBaseUrl}${basePath}/uploadfiles/invoicesAndOrders`, {
         method: "POST",
         body: formData,
@@ -378,18 +383,17 @@ export default function EditPublishedOrder() {
 
       const data = await response.json();
       const newFiles: OrderFile[] = data.filePaths.map((path: string) => ({
-        fileName: path.split('/').pop() || '',
+        fileName: path.split("/").pop() || "",
         filePath: path,
       }));
 
       setFiles([...files, ...newFiles]);
       setSelectedFiles(null);
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
-      
+
       setSuccess("Files uploaded successfully");
-      
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to upload files");
     } finally {
@@ -402,8 +406,8 @@ export default function EditPublishedOrder() {
       setSelectedProducts(new Set());
     } else {
       const allProductIds = new Set<string>();
-      products.forEach(product => {
-        product.productVariants.forEach(variant => {
+      products.forEach((product) => {
+        product.productVariants.forEach((variant) => {
           allProductIds.add(variant.variantShopifyGid);
         });
       });
@@ -420,11 +424,11 @@ export default function EditPublishedOrder() {
       newSelectedProducts.add(variantId);
     }
     setSelectedProducts(newSelectedProducts);
-    
+
     // Update selectAll state based on whether all products are selected
     let allSelected = true;
-    products.forEach(product => {
-      product.productVariants.forEach(variant => {
+    products.forEach((product) => {
+      product.productVariants.forEach((variant) => {
         if (!newSelectedProducts.has(variant.variantShopifyGid)) {
           allSelected = false;
         }
@@ -434,51 +438,51 @@ export default function EditPublishedOrder() {
   };
 
   const handleProductChange = (
-    productIndex: number, 
-    variantIndex: number, 
-    field: keyof ProductVariant | 'productType' | 'productTags' | 'productCanceled', 
+    productIndex: number,
+    variantIndex: number,
+    field: keyof ProductVariant | "productType" | "productTags" | "productCanceled",
     value: any
   ) => {
     const updatedProducts = [...products];
-    
-    if (field === 'productType' || field === 'productTags' || field === 'productCanceled') {
+
+    if (field === "productType" || field === "productTags" || field === "productCanceled") {
       // These are product-level fields
       updatedProducts[productIndex] = {
         ...updatedProducts[productIndex],
         [field]: value,
-        updateProductFlag: true
+        updateProductFlag: true,
       };
     } else {
       // These are variant-level fields
       updatedProducts[productIndex].productVariants[variantIndex] = {
         ...updatedProducts[productIndex].productVariants[variantIndex],
         [field]: value,
-        updateVariantFlag: true
+        updateVariantFlag: true,
       };
     }
-    
+
     setProducts(updatedProducts);
   };
 
   const addPayment = () => {
     const newPayment: Payment = {
-      paymentDate: new Date().toISOString().split('T')[0],
-      paymentDescription: '',
-      paymentMethod: 'Wire',
+      paymentDate: new Date().toISOString().split("T")[0],
+      paymentDescription: "",
+      paymentMethod: "Wire",
       paymentAmount: 0,
-      paymentType: 'Invoice',
-      paymentInvoiceNumber: '',
-      paymentInvoiceAmount: 0
+      paymentType: "Invoice",
+      paymentInvoiceNumber: "",
+      paymentInvoiceAmount: 0,
     };
     setPayments([...payments, newPayment]);
   };
 
   const addCredit = () => {
     const newCredit: Credit = {
-      creditDate: new Date().toISOString().split('T')[0],
-      creditDescription: '',
-      creditMethod: 'Note',
-      creditAmount: 0
+      creditDate: new Date().toISOString().split("T")[0],
+      creditDescription: "",
+      creditMethod: "Note",
+      creditAmount: 0,
     };
     setCredits([...credits, newCredit]);
   };
@@ -499,7 +503,7 @@ export default function EditPublishedOrder() {
     const updatedPayments = [...payments];
     updatedPayments[index] = {
       ...updatedPayments[index],
-      [field]: value
+      [field]: value,
     };
     setPayments(updatedPayments);
   };
@@ -508,7 +512,7 @@ export default function EditPublishedOrder() {
     const updatedCredits = [...credits];
     updatedCredits[index] = {
       ...updatedCredits[index],
-      [field]: value
+      [field]: value,
     };
     setCredits(updatedCredits);
   };
@@ -516,40 +520,40 @@ export default function EditPublishedOrder() {
   const calculateTotals = () => {
     // Calculate subtotal from products
     let subTotal = 0;
-    products.forEach(product => {
-      product.productVariants.forEach(variant => {
+    products.forEach((product) => {
+      product.productVariants.forEach((variant) => {
         subTotal += variant.variantCost * variant.variantQuantity;
       });
     });
-    
+
     // Calculate payment total
     const paymentTotal = payments.reduce((sum, payment) => sum + payment.paymentAmount, 0);
-    
+
     // Calculate credit total
     const creditTotal = credits.reduce((sum, credit) => sum + credit.creditAmount, 0);
-    
+
     // Calculate grand total
     const grandTotal = subTotal - paymentTotal - creditTotal;
-    
+
     setTotals({
       subTotal,
       paymentTotal,
       creditTotal,
-      grandTotal
+      grandTotal,
     });
   };
 
   const handleSaveOrder = async () => {
     if (!order) return;
-    
+
     try {
       setIsSaving(true);
       setError("");
-      
+
       const token = localStorage.getItem("bridesbyldToken");
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
       const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
-      
+
       // Prepare the update payload
       const updatePayload = {
         purchaseOrderID: order.purchaseOrderID,
@@ -567,29 +571,31 @@ export default function EditPublishedOrder() {
         purchaseOrderTotalCredits: totals.creditTotal,
         purchaseOrderTotalItemsCost: totals.subTotal,
         purchaseOrderBalanceDue: totals.grandTotal,
-        products: products
+        products: products,
       };
 
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/updatePurchaseOrderByIdNoShopify/${order.purchaseOrderID}`, {
-        method: "POST",
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatePayload),
-      });
+      const response = await fetch(
+        `${apiBaseUrl}${basePath}/shopify/updatePurchaseOrderByIdNoShopify/${order.purchaseOrderID}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updatePayload),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to save order");
       }
 
       setSuccess("Order updated successfully");
-      
+
       // Navigate back to order detail page after successful save
       setTimeout(() => {
         navigate(`/published-order-detail?orderId=${order.purchaseOrderID}`);
       }, 2000);
-      
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save order");
     } finally {
@@ -598,25 +604,25 @@ export default function EditPublishedOrder() {
   };
 
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 2,
     }).format(amount);
   };
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric'
+    return date.toLocaleDateString("en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      year: "numeric",
     });
   };
 
   const formatPercentage = (value: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'percent',
+    return new Intl.NumberFormat("en-US", {
+      style: "percent",
       minimumFractionDigits: 2,
     }).format(value / 100);
   };
@@ -668,9 +674,9 @@ export default function EditPublishedOrder() {
   return (
     <Layout title={`Edit Order #${order.purchaseOrderID}`}>
       <div className="w-full px-6 py-6 space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-5 space-y-6">
             {/* Header */}
             <Card>
               <div className="flex items-center justify-between">
@@ -678,7 +684,8 @@ export default function EditPublishedOrder() {
                   <FileText className="w-8 h-8 text-purple-600" />
                   <div>
                     <h1 className="text-2xl font-bold text-slate-900">
-                      Order #{order.purchaseOrderID} -- <span className="text-green-600">Published</span>
+                      Order #{order.purchaseOrderID} --{" "}
+                      <span className="text-green-600">Published</span>
                     </h1>
                     <p className="text-slate-600">Edit order details and products</p>
                   </div>
@@ -693,7 +700,12 @@ export default function EditPublishedOrder() {
                     />
                     <span className="text-sm font-medium text-slate-700">Receive Complete</span>
                   </label>
-                  <Button onClick={() => navigate(`/published-order-detail?orderId=${order.purchaseOrderID}`)} variant="outline">
+                  <Button
+                    onClick={() =>
+                      navigate(`/published-order-detail?orderId=${order.purchaseOrderID}`)
+                    }
+                    variant="outline"
+                  >
                     Back to Order
                   </Button>
                 </div>
@@ -706,11 +718,7 @@ export default function EditPublishedOrder() {
                 <div className="flex items-center space-x-2 text-red-700">
                   <AlertTriangle className="w-5 h-5" />
                   <span>{error}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setError('')}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setError("")}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -722,11 +730,7 @@ export default function EditPublishedOrder() {
                 <div className="flex items-center space-x-2 text-green-700">
                   <CheckCircle className="w-5 h-5" />
                   <span>{success}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSuccess('')}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setSuccess("")}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -775,8 +779,10 @@ export default function EditPublishedOrder() {
                           className="px-2 py-1 border border-slate-300 rounded text-sm"
                         >
                           <option value="">Select Brand...</option>
-                          {vendors.map(vendor => (
-                            <option key={vendor} value={vendor}>{vendor}</option>
+                          {vendors.map((vendor) => (
+                            <option key={vendor} value={vendor}>
+                              {vendor}
+                            </option>
                           ))}
                         </select>
                         <select
@@ -784,8 +790,10 @@ export default function EditPublishedOrder() {
                           onChange={(e) => setNewYearSeason(e.target.value)}
                           className="px-2 py-1 border border-slate-300 rounded text-sm"
                         >
-                          {Array.from({ length: 11 }, (_, i) => (23 + i).toString()).map(year => (
-                            <option key={year} value={year}>{year}</option>
+                          {Array.from({ length: 11 }, (_, i) => (23 + i).toString()).map((year) => (
+                            <option key={year} value={year}>
+                              {year}
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -826,7 +834,8 @@ export default function EditPublishedOrder() {
                   <div className="space-y-1">
                     <span className="font-semibold text-slate-900">Payment Terms:</span>
                     <p className="text-sm text-slate-700">
-                      Deposit: {order.depositPercent}% - Delivery: {order.onDeliverPercent}% - Net30: {order.net30Percent}%
+                      Deposit: {order.depositPercent}% - Delivery: {order.onDeliverPercent}% -
+                      Net30: {order.net30Percent}%
                     </p>
                   </div>
                 </div>
@@ -920,33 +929,63 @@ export default function EditPublishedOrder() {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
                         <span className="sr-only">Select</span>
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Name</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Color</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Size</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">QTY</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Cost</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Retail</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">SKU</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">P-Type</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Tags</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Preorder</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Margin</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Status</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Total</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">CAT</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                        Name
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                        Color
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                        Size
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                        QTY
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                        Cost
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                        Retail
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                        SKU
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                        P-Type
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                        Tags
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                        Preorder
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                        Margin
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                        Total
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                        CAT
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {products.map((product, productIndex) => {
                       // Group products by name for alternating row colors
-                      let lastProductName = productIndex > 0 ? products[productIndex - 1].productName : null;
+                      let lastProductName =
+                        productIndex > 0 ? products[productIndex - 1].productName : null;
                       let isNewProductGroup = product.productName !== lastProductName;
-                      let isEvenGroup = Math.floor(productIndex / product.productVariants.length) % 2 === 0;
-                      
+                      let isEvenGroup =
+                        Math.floor(productIndex / product.productVariants.length) % 2 === 0;
+
                       return product.productVariants.map((variant, variantIndex) => (
-                        <tr 
-                          key={`${productIndex}-${variantIndex}`} 
-                          className={isEvenGroup ? 'bg-white' : 'bg-slate-50'}
+                        <tr
+                          key={`${productIndex}-${variantIndex}`}
+                          className={isEvenGroup ? "bg-white" : "bg-slate-50"}
                         >
                           <td className="px-4 py-3">
                             <button
@@ -962,7 +1001,9 @@ export default function EditPublishedOrder() {
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-900">
                             <a
-                              href={`https://lola-dre.myshopify.com/admin/products/${product.productShopifyGid?.split('/').pop()}`}
+                              href={`https://lola-dre.myshopify.com/admin/products/${product.productShopifyGid
+                                ?.split("/")
+                                .pop()}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-purple-600 hover:text-purple-800"
@@ -970,20 +1011,28 @@ export default function EditPublishedOrder() {
                               {product.productName}
                             </a>
                           </td>
-                          <td className="px-4 py-3 text-sm text-slate-600">{variant.variantColor}</td>
-                          <td className="px-4 py-3 text-sm text-slate-600">{variant.variantSize}</td>
-                          <td className="px-4 py-3 text-sm text-slate-900 font-medium">{variant.variantQuantity}</td>
+                          <td className="px-4 py-3 text-sm text-slate-600">
+                            {variant.variantColor}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-600">
+                            {variant.variantSize}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-900 font-medium">
+                            {variant.variantQuantity}
+                          </td>
                           <td className="px-4 py-3 text-sm text-slate-900">
                             <Input
                               type="number"
                               step="0.01"
                               value={variant.variantCost}
-                              onChange={(e) => handleProductChange(
-                                productIndex, 
-                                variantIndex, 
-                                'variantCost', 
-                                parseFloat(e.target.value) || 0
-                              )}
+                              onChange={(e) =>
+                                handleProductChange(
+                                  productIndex,
+                                  variantIndex,
+                                  "variantCost",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
                               className="w-24"
                             />
                           </td>
@@ -992,26 +1041,32 @@ export default function EditPublishedOrder() {
                               type="number"
                               step="0.01"
                               value={variant.variantRetail}
-                              onChange={(e) => handleProductChange(
-                                productIndex, 
-                                variantIndex, 
-                                'variantRetail', 
-                                parseFloat(e.target.value) || 0
-                              )}
+                              onChange={(e) =>
+                                handleProductChange(
+                                  productIndex,
+                                  variantIndex,
+                                  "variantRetail",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
                               className="w-24"
                             />
                           </td>
-                          <td className="px-4 py-3 text-sm text-slate-600 font-mono">{variant.variantSku}</td>
+                          <td className="px-4 py-3 text-sm text-slate-600 font-mono">
+                            {variant.variantSku}
+                          </td>
                           <td className="px-4 py-3 text-sm text-slate-600">
                             <Input
                               type="text"
                               value={product.productType}
-                              onChange={(e) => handleProductChange(
-                                productIndex, 
-                                variantIndex, 
-                                'productType', 
-                                e.target.value
-                              )}
+                              onChange={(e) =>
+                                handleProductChange(
+                                  productIndex,
+                                  variantIndex,
+                                  "productType",
+                                  e.target.value
+                                )
+                              }
                               className="w-32"
                             />
                           </td>
@@ -1019,24 +1074,28 @@ export default function EditPublishedOrder() {
                             <Input
                               type="text"
                               value={product.productTags}
-                              onChange={(e) => handleProductChange(
-                                productIndex, 
-                                variantIndex, 
-                                'productTags', 
-                                e.target.value
-                              )}
+                              onChange={(e) =>
+                                handleProductChange(
+                                  productIndex,
+                                  variantIndex,
+                                  "productTags",
+                                  e.target.value
+                                )
+                              }
                               className="w-32"
                             />
                           </td>
                           <td className="px-4 py-3">
                             <select
                               value={variant.variantPreOrder.toString()}
-                              onChange={(e) => handleProductChange(
-                                productIndex, 
-                                variantIndex, 
-                                'variantPreOrder', 
-                                e.target.value === 'true'
-                              )}
+                              onChange={(e) =>
+                                handleProductChange(
+                                  productIndex,
+                                  variantIndex,
+                                  "variantPreOrder",
+                                  e.target.value === "true"
+                                )
+                              }
                               className="px-2 py-1 border border-slate-300 rounded text-sm"
                             >
                               <option value="false">No</option>
@@ -1045,24 +1104,28 @@ export default function EditPublishedOrder() {
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-900">
                             {formatPercentage(
-                              variant.variantRetail > 0 
-                                ? ((variant.variantRetail - variant.variantCost) / variant.variantRetail) * 100 
+                              variant.variantRetail > 0
+                                ? ((variant.variantRetail - variant.variantCost) /
+                                    variant.variantRetail) *
+                                    100
                                 : 0
                             )}
                           </td>
                           <td className="px-4 py-3">
                             <select
                               value={product.productCanceled.toString()}
-                              onChange={(e) => handleProductChange(
-                                productIndex, 
-                                variantIndex, 
-                                'productCanceled', 
-                                e.target.value === 'true'
-                              )}
+                              onChange={(e) =>
+                                handleProductChange(
+                                  productIndex,
+                                  variantIndex,
+                                  "productCanceled",
+                                  e.target.value === "true"
+                                )
+                              }
                               className={`px-2 py-1 border rounded text-sm ${
-                                product.productCanceled 
-                                  ? 'border-red-300 text-red-700 bg-red-50' 
-                                  : 'border-green-300 text-green-700 bg-green-50'
+                                product.productCanceled
+                                  ? "border-red-300 text-red-700 bg-red-50"
+                                  : "border-green-300 text-green-700 bg-green-50"
                               }`}
                             >
                               <option value="false">Active</option>
@@ -1076,12 +1139,14 @@ export default function EditPublishedOrder() {
                             <Input
                               type="text"
                               value={variant.variantMetafieldCategory}
-                              onChange={(e) => handleProductChange(
-                                productIndex, 
-                                variantIndex, 
-                                'variantMetafieldCategory', 
-                                e.target.value
-                              )}
+                              onChange={(e) =>
+                                handleProductChange(
+                                  productIndex,
+                                  variantIndex,
+                                  "variantMetafieldCategory",
+                                  e.target.value
+                                )
+                              }
                               className="w-24"
                             />
                           </td>
@@ -1102,7 +1167,7 @@ export default function EditPublishedOrder() {
                   Add Credit
                 </Button>
               </div>
-              
+
               {credits.length === 0 ? (
                 <p className="text-center text-slate-500 py-4">No credits added</p>
               ) : (
@@ -1110,11 +1175,21 @@ export default function EditPublishedOrder() {
                   <table className="w-full">
                     <thead className="bg-slate-50">
                       <tr>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">Date</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">Description</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">Method</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">Amount</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">Actions</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">
+                          Date
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">
+                          Description
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">
+                          Method
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">
+                          Amount
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
@@ -1124,7 +1199,7 @@ export default function EditPublishedOrder() {
                             <Input
                               type="date"
                               value={credit.creditDate}
-                              onChange={(e) => updateCredit(index, 'creditDate', e.target.value)}
+                              onChange={(e) => updateCredit(index, "creditDate", e.target.value)}
                               className="w-32"
                             />
                           </td>
@@ -1132,14 +1207,16 @@ export default function EditPublishedOrder() {
                             <Input
                               type="text"
                               value={credit.creditDescription}
-                              onChange={(e) => updateCredit(index, 'creditDescription', e.target.value)}
+                              onChange={(e) =>
+                                updateCredit(index, "creditDescription", e.target.value)
+                              }
                               className="w-full"
                             />
                           </td>
                           <td className="px-4 py-2">
                             <select
                               value={credit.creditMethod}
-                              onChange={(e) => updateCredit(index, 'creditMethod', e.target.value)}
+                              onChange={(e) => updateCredit(index, "creditMethod", e.target.value)}
                               className="px-2 py-1 border border-slate-300 rounded text-sm w-full"
                             >
                               <option value="Note">Note</option>
@@ -1152,17 +1229,15 @@ export default function EditPublishedOrder() {
                               type="number"
                               step="0.01"
                               value={credit.creditAmount}
-                              onChange={(e) => updateCredit(index, 'creditAmount', parseFloat(e.target.value) || 0)}
+                              onChange={(e) =>
+                                updateCredit(index, "creditAmount", parseFloat(e.target.value) || 0)
+                              }
                               className="w-32"
                               icon={<DollarSign className="w-4 h-4 text-slate-400" />}
                             />
                           </td>
                           <td className="px-4 py-2">
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              onClick={() => removeCredit(index)}
-                            >
+                            <Button variant="danger" size="sm" onClick={() => removeCredit(index)}>
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </td>
@@ -1183,7 +1258,7 @@ export default function EditPublishedOrder() {
                   Add Payment
                 </Button>
               </div>
-              
+
               {payments.length === 0 ? (
                 <p className="text-center text-slate-500 py-4">No payments added</p>
               ) : (
@@ -1191,14 +1266,30 @@ export default function EditPublishedOrder() {
                   <table className="w-full">
                     <thead className="bg-slate-50">
                       <tr>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">Date</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">Description</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">Method</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">Amount</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">Type</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">Invoice #</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">Invoice Amount</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">Actions</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">
+                          Date
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">
+                          Description
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">
+                          Method
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">
+                          Amount
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">
+                          Type
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">
+                          Invoice #
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">
+                          Invoice Amount
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-900">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
@@ -1208,7 +1299,7 @@ export default function EditPublishedOrder() {
                             <Input
                               type="date"
                               value={payment.paymentDate}
-                              onChange={(e) => updatePayment(index, 'paymentDate', e.target.value)}
+                              onChange={(e) => updatePayment(index, "paymentDate", e.target.value)}
                               className="w-32"
                             />
                           </td>
@@ -1216,14 +1307,18 @@ export default function EditPublishedOrder() {
                             <Input
                               type="text"
                               value={payment.paymentDescription}
-                              onChange={(e) => updatePayment(index, 'paymentDescription', e.target.value)}
+                              onChange={(e) =>
+                                updatePayment(index, "paymentDescription", e.target.value)
+                              }
                               className="w-full"
                             />
                           </td>
                           <td className="px-4 py-2">
                             <select
                               value={payment.paymentMethod}
-                              onChange={(e) => updatePayment(index, 'paymentMethod', e.target.value)}
+                              onChange={(e) =>
+                                updatePayment(index, "paymentMethod", e.target.value)
+                              }
                               className="px-2 py-1 border border-slate-300 rounded text-sm w-full"
                             >
                               <option value="Wire">Wire</option>
@@ -1236,7 +1331,13 @@ export default function EditPublishedOrder() {
                               type="number"
                               step="0.01"
                               value={payment.paymentAmount}
-                              onChange={(e) => updatePayment(index, 'paymentAmount', parseFloat(e.target.value) || 0)}
+                              onChange={(e) =>
+                                updatePayment(
+                                  index,
+                                  "paymentAmount",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
                               className="w-32"
                               icon={<DollarSign className="w-4 h-4 text-slate-400" />}
                             />
@@ -1244,7 +1345,7 @@ export default function EditPublishedOrder() {
                           <td className="px-4 py-2">
                             <select
                               value={payment.paymentType}
-                              onChange={(e) => updatePayment(index, 'paymentType', e.target.value)}
+                              onChange={(e) => updatePayment(index, "paymentType", e.target.value)}
                               className="px-2 py-1 border border-slate-300 rounded text-sm w-full"
                             >
                               <option value="Invoice">Invoice</option>
@@ -1255,7 +1356,9 @@ export default function EditPublishedOrder() {
                             <Input
                               type="text"
                               value={payment.paymentInvoiceNumber}
-                              onChange={(e) => updatePayment(index, 'paymentInvoiceNumber', e.target.value)}
+                              onChange={(e) =>
+                                updatePayment(index, "paymentInvoiceNumber", e.target.value)
+                              }
                               className="w-full"
                             />
                           </td>
@@ -1264,17 +1367,19 @@ export default function EditPublishedOrder() {
                               type="number"
                               step="0.01"
                               value={payment.paymentInvoiceAmount}
-                              onChange={(e) => updatePayment(index, 'paymentInvoiceAmount', parseFloat(e.target.value) || 0)}
+                              onChange={(e) =>
+                                updatePayment(
+                                  index,
+                                  "paymentInvoiceAmount",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
                               className="w-32"
                               icon={<DollarSign className="w-4 h-4 text-slate-400" />}
                             />
                           </td>
                           <td className="px-4 py-2">
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              onClick={() => removePayment(index)}
-                            >
+                            <Button variant="danger" size="sm" onClick={() => removePayment(index)}>
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </td>
@@ -1375,7 +1480,9 @@ export default function EditPublishedOrder() {
                     <hr className="border-slate-200" />
                     <div className="flex justify-between items-center text-lg">
                       <span className="font-semibold text-slate-900">Total Balance Due:</span>
-                      <span className="font-bold text-slate-900">{formatCurrency(totals.grandTotal)}</span>
+                      <span className="font-bold text-slate-900">
+                        {formatCurrency(totals.grandTotal)}
+                      </span>
                     </div>
                   </div>
                 </div>
