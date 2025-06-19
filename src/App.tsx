@@ -26,6 +26,7 @@ import BulkDiscountReverse from "./pages/BulkDiscountReverse";
 import SellThroughImport from "./pages/SellThroughImport";
 import SellThroughData from "./pages/SellThroughData";
 import Pictures from "./pages/Pictures";
+import EditPublishedOrder from "./pages/EditPublishedOrder";
 
 interface LoginResponse {
   registered: boolean;
@@ -135,14 +136,14 @@ function LoginPage() {
           {/* Logo and header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full mb-4 shadow-lg">
-              <img 
-                src="/logo.png" 
-                alt="Lola Dré" 
+              <img
+                src="/logo.png"
+                alt="Lola Dré"
                 className="w-12 h-12 object-contain"
                 onError={(e) => {
                   // Fallback to icon if logo fails to load
-                  e.currentTarget.style.display = 'none';
-                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                  e.currentTarget.style.display = "none";
+                  e.currentTarget.nextElementSibling?.classList.remove("hidden");
                 }}
               />
               <ShoppingBag className="w-8 h-8 text-purple-600 hidden" />
@@ -343,6 +344,14 @@ function App() {
           element={
             <ProtectedRoute>
               <PublishedOrderDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/edit-published-order/"
+          element={
+            <ProtectedRoute>
+              <EditPublishedOrder />
             </ProtectedRoute>
           }
         />
