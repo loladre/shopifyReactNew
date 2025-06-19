@@ -1,16 +1,16 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: boolean;
   icon?: React.ReactNode;
 }
 
-export default function Input({ 
+const Input = forwardRef<HTMLInputElement, InputProps>(({ 
   error = false, 
   icon, 
   className = '', 
   ...props 
-}: InputProps) {
+}, ref) => {
   const baseClasses = 'w-full px-4 py-3 bg-white border rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 transition-all duration-200';
   
   const stateClasses = error 
@@ -28,7 +28,11 @@ export default function Input({
           {icon}
         </div>
       )}
-      <input className={classes} {...props} />
+      <input ref={ref} className={classes} {...props} />
     </div>
   );
-}
+});
+
+Input.displayName = 'Input';
+
+export default Input;
