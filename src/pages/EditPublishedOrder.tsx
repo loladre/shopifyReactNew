@@ -437,6 +437,7 @@ export default function EditPublishedOrder() {
     setSelectAll(allSelected);
   };
 
+  // Enhanced product change handler with synchronized pricing
   const handleProductChange = (
     productIndex: number,
     variantIndex: number,
@@ -454,11 +455,33 @@ export default function EditPublishedOrder() {
       };
     } else {
       // These are variant-level fields
+      const currentProduct = updatedProducts[productIndex];
+      const currentVariant = currentProduct.productVariants[variantIndex];
+      
+      // Update the current variant
       updatedProducts[productIndex].productVariants[variantIndex] = {
-        ...updatedProducts[productIndex].productVariants[variantIndex],
+        ...currentVariant,
         [field]: value,
         updateVariantFlag: true,
       };
+
+      // If changing retail price or cost, update all variants with the same product name
+      if (field === "variantRetail" || field === "variantCost") {
+        const currentProductName = currentProduct.productName;
+        
+        updatedProducts.forEach((product, pIndex) => {
+          if (product.productName === currentProductName) {
+            product.productVariants.forEach((variant, vIndex) => {
+              updatedProducts[pIndex].productVariants[vIndex] = {
+                ...variant,
+                [field]: value,
+                updateVariantFlag: true,
+              };
+            });
+            updatedProducts[pIndex].updateProductFlag = true;
+          }
+        });
+      }
     }
 
     setProducts(updatedProducts);
@@ -1015,10 +1038,35 @@ export default function EditPublishedOrder() {
                             {variant.variantColor}
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-600">
-                            {variant.variantSize}
+                            <Input
+                              type="text"
+                              value={variant.variantSize}
+                              onChange={(e) =>
+                                handleProductChange(
+                                  productIndex,
+                                  variantIndex,
+                                  "variantSize",
+                                  e.target.value
+                                )
+                              }
+                              className="w-20 text-sm py-1 px-2"
+                            />
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-900 font-medium">
-                            {variant.variantQuantity}
+                            <Input
+                              type="number"
+                              min="0"
+                              value={variant.variantQuantity}
+                              onChange={(e) =>
+                                handleProductChange(
+                                  productIndex,
+                                  variantIndex,
+                                  "variantQuantity",
+                                  parseInt(e.target.value) || 0
+                                )
+                              }
+                              className="w-20 text-sm py-1 px-2"
+                            />
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-900">
                             <Input
@@ -1033,7 +1081,7 @@ export default function EditPublishedOrder() {
                                   parseFloat(e.target.value) || 0
                                 )
                               }
-                              className="w-24"
+                              className="w-24 text-sm py-1 px-2"
                             />
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-900">
@@ -1049,7 +1097,7 @@ export default function EditPublishedOrder() {
                                   parseFloat(e.target.value) || 0
                                 )
                               }
-                              className="w-24"
+                              className="w-24 text-sm py-1 px-2"
                             />
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-600 font-mono">
@@ -1067,7 +1115,7 @@ export default function EditPublishedOrder() {
                                   e.target.value
                                 )
                               }
-                              className="w-32"
+                              className="w-32 text-sm py-1 px-2"
                             />
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-600">
@@ -1082,7 +1130,7 @@ export default function EditPublishedOrder() {
                                   e.target.value
                                 )
                               }
-                              className="w-32"
+                              className="w-32 text-sm py-1 px-2"
                             />
                           </td>
                           <td className="px-4 py-3">
@@ -1147,7 +1195,7 @@ export default function EditPublishedOrder() {
                                   e.target.value
                                 )
                               }
-                              className="w-24"
+                              className="w-24 text-sm py-1 px-2"
                             />
                           </td>
                         </tr>
