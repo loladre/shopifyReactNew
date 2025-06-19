@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import FormField from "../components/ui/FormField";
+import DataTable, { Column } from "../components/ui/DataTable";
+import StatusCard from "../components/ui/StatusCard";
+import ServerMessagePanel from "../components/ui/ServerMessagePanel";
 import {
   Upload,
   FileSpreadsheet,
@@ -15,8 +19,18 @@ import {
   AlertCircle,
   Calendar,
   DollarSign,
-  Wifi,
-  WifiOff,
+  Package,
+  ShoppingCart,
+  Building2,
+  Hash,
+  Tag,
+  Percent,
+  CheckCircle,
+  X,
+  RefreshCw,
+  Settings,
+  Eye,
+  TrendingUp
 } from "lucide-react";
 import * as ExcelJS from "exceljs";
 import { io, Socket } from "socket.io-client";
@@ -108,8 +122,13 @@ interface PurchaseOrderSchema {
 }
 
 export default function PurchaseOrderImport() {
+  const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // State
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [credits, setCredits] = useState<Credit[]>([]);
@@ -154,13 +173,11 @@ export default function PurchaseOrderImport() {
     grandTotal: 0,
   });
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   // Authentication check and WebSocket initialization
   useEffect(() => {
     const token = localStorage.getItem("bridesbyldToken");
     if (!token) {
-      window.location.href = "/";
+      navigate("/");
       return;
     }
 
@@ -177,11 +194,10 @@ export default function PurchaseOrderImport() {
 
   const initializeWebSocket = (token: string) => {
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-    const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
 
     // Initialize Socket.IO connection to the correct server endpoint
     const socketInstance = io(apiBaseUrl, {
-      path: "/socket.io/", // Use the correct Socket.IO path from your Apache config
+      path: "/socket.io/",
       transports: ["websocket", "polling"],
       autoConnect: true,
       reconnection: true,
@@ -198,7 +214,6 @@ export default function PurchaseOrderImport() {
 
     // Connection event handlers
     socketInstance.on("connect", () => {
-      console.log("Socket.IO connected with authentication");
       setSocketConnected(true);
       setServerMessages((prev) => [
         ...prev,
@@ -207,13 +222,11 @@ export default function PurchaseOrderImport() {
     });
 
     socketInstance.on("disconnect", () => {
-      console.log("Socket.IO disconnected");
       setSocketConnected(false);
       setServerMessages((prev) => [...prev, { message: "Server disconnected", isError: true }]);
     });
 
     socketInstance.on("connect_error", (error) => {
-      console.error("Socket.IO connection error:", error);
       setSocketConnected(false);
       setServerMessages((prev) => [
         ...prev,
@@ -223,19 +236,18 @@ export default function PurchaseOrderImport() {
       // If authentication fails, redirect to login
       if (error.message.includes("Authentication") || error.message.includes("Unauthorized")) {
         localStorage.removeItem("bridesbyldToken");
-        window.location.href = "/";
+        navigate("/");
       }
     });
 
     // Authentication error handler
     socketInstance.on("auth_error", (error) => {
-      console.error("Socket.IO authentication error:", error);
       setServerMessages((prev) => [
         ...prev,
         { message: `Authentication error: ${error}`, isError: true },
       ]);
       localStorage.removeItem("bridesbyldToken");
-      window.location.href = "/";
+      navigate("/");
     });
 
     // Message event handler
@@ -519,6 +531,7 @@ export default function PurchaseOrderImport() {
     }
 
     console.log(`Processed ${newProducts.length} individual products`);
+    setSuccess(`Successfully processed ${newProducts.length} products from Excel file`);
     setProducts(newProducts);
   };
 
@@ -1124,6 +1137,7 @@ export default function PurchaseOrderImport() {
 
       setSubmitSuccess(true);
       setSubmitMessage("Draft Purchase order submitted successfully");
+      setSuccess("Draft Purchase order submitted successfully");
 
       // Disable further submissions
       setIsLoading(false);
@@ -1139,692 +1153,697 @@ export default function PurchaseOrderImport() {
     await createPurchaseOrder();
   };
 
+  // Calculate summary statistics
+  const totalProducts = products.length;
+  const uniqueStyles = new Set(products.map(p => p.style)).size;
+  const totalCost = products.reduce((sum, p) => sum + p.cost, 0);
+  const totalRetail = products.reduce((sum, p) => sum + p.retail, 0);
+  const avgMargin = products.length > 0 ? products.reduce((sum, p) => sum + p.margin, 0) / products.length : 0;
+
   return (
-    <Layout title="New Draft Order" showHeader={true} showFooter={false}>
-      <div className="flex w-full px-6 py-6 gap-6 items-start">
-        {/* Left: Main content area */}
-        <div className="flex-1 space-y-6">
-          {/* Header Section */}
-          <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                  New Draft Order:
-                  <span className="bg-yellow-200 text-yellow-800 px-3 py-1 rounded-lg text-sm font-medium">
-                    DRAFT
-                  </span>
-                </h1>
-                <p className="text-slate-600 mt-1">Import purchase order from Excel file</p>
-
-                {/* Socket Connection Status */}
-                <div className="flex items-center gap-2 mt-2">
-                  {socketConnected ? (
-                    <div className="flex items-center gap-1 text-green-600">
-                      <Wifi className="w-4 h-4" />
-                      <span className="text-sm">Connected</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1 text-red-600">
-                      <WifiOff className="w-4 h-4" />
-                      <span className="text-sm">Disconnected</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button variant="secondary" size="sm">
-                  Switch to NeOrder
-                </Button>
-
-                <div className="flex gap-2">
-                  <div className="relative">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".xlsx,.xls"
-                      onChange={handleFileSelect}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    />
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <FileSpreadsheet className="w-4 h-4" />
-                      {selectedFile ? selectedFile.name : "Choose Excel File"}
-                    </Button>
-                  </div>
-                  <Button
-                    onClick={handleFileUpload}
-                    isLoading={isLoading}
-                    disabled={!selectedFile}
-                    className="flex items-center gap-2"
-                  >
-                    <Upload className="w-4 h-4" />
-                    Upload
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Server Messages
-        {serverMessages.length > 0 && (
-          <Card className="max-h-32 overflow-y-auto">
-            <h3 className="text-sm font-semibold text-slate-900 mb-2">Server Messages</h3>
-            <div className="space-y-1">
-              {serverMessages.slice(-5).map((msg, index) => (
-                <p
-                  key={index}
-                  className={`text-xs ${msg.isError ? "text-red-600" : "text-green-600"}`}
-                >
-                  {msg.message}
-                </p>
-              ))}
-            </div>
-          </Card>
-        )} */}
-
-          {/* Success Message */}
-          {submitSuccess && (
-            <Card className="border-green-200 bg-green-50">
-              <div className="flex items-center gap-2 text-green-700">
-                <CheckSquare className="w-5 h-5" />
-                <span>{submitMessage}</span>
-              </div>
-            </Card>
-          )}
-
-          {/* Error Display */}
-          {error && (
-            <Card className="border-red-200 bg-red-50">
-              <div className="flex items-center gap-2 text-red-700">
-                <AlertCircle className="w-5 h-5" />
-                <span>{error}</span>
-              </div>
-            </Card>
-          )}
-
-          {/* Vendor Selection */}
-          <Card>
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Vendor Information</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="vendorType"
-                    value="existing"
-                    checked={formData.vendorType === "existing"}
-                    onChange={(e) => setFormData({ ...formData, vendorType: e.target.value })}
-                    className="text-purple-600"
-                  />
-                  <span className="font-medium">Existing Brand</span>
-                </label>
-                <select
-                  value={formData.selectedVendor}
-                  onChange={(e) => setFormData({ ...formData, selectedVendor: e.target.value })}
-                  disabled={formData.vendorType !== "existing"}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-slate-100"
-                >
-                  <option value="">Choose vendor...</option>
-                  {vendors.map((vendor) => (
-                    <option key={vendor} value={vendor}>
-                      {vendor}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-3">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="vendorType"
-                    value="new"
-                    checked={formData.vendorType === "new"}
-                    onChange={(e) => setFormData({ ...formData, vendorType: e.target.value })}
-                    className="text-purple-600"
-                  />
-                  <span className="font-medium">New Brand</span>
-                </label>
-                <Input
-                  value={formData.newVendor}
-                  onChange={(e) => setFormData({ ...formData, newVendor: e.target.value })}
-                  disabled={formData.vendorType !== "new"}
-                  placeholder="Enter new vendor name"
-                />
-              </div>
-            </div>
-          </Card>
-
-          {/* Season Constructor & Order Details */}
-          <Card>
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Season & Order Details</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Season Constructor - Left Half */}
-              <div className="space-y-4">
-                <h4 className="text-md font-medium text-slate-800">Season Constructor</h4>
-                <div className="flex gap-2 items-end">
-                  <FormField label="Season">
-                    <select
-                      value={formData.season}
-                      onChange={(e) => setFormData({ ...formData, season: e.target.value })}
-                      className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 w-28"
-                    >
-                      {seasonOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </FormField>
-
-                  <FormField label="Brand">
-                    <select
-                      value={formData.brandSeason}
-                      onChange={(e) => setFormData({ ...formData, brandSeason: e.target.value })}
-                      className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 flex-1 min-w-0"
-                    >
-                      <option value="">Select Brand...</option>
-                      {vendors.map((vendor) => (
-                        <option key={vendor} value={vendor}>
-                          {vendor}
-                        </option>
-                      ))}
-                    </select>
-                  </FormField>
-
-                  <FormField label="Year">
-                    <select
-                      value={formData.yearSeason}
-                      onChange={(e) => setFormData({ ...formData, yearSeason: e.target.value })}
-                      className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 w-20"
-                    >
-                      {yearOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </FormField>
-
-                  <Button size="sm" onClick={applySeason}>
-                    Apply
-                  </Button>
-
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    onClick={() => {
-                      setFormData({
-                        ...formData,
-                        season: "Fall",
-                        brandSeason: "",
-                        yearSeason: "26",
-                      });
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </div>
-
-                {/* Season Preview */}
-                <div className="mt-3 p-3 bg-slate-50 rounded-lg">
-                  <span className="text-sm text-slate-600">Preview: </span>
-                  <span className="font-medium text-slate-900">{constructSeason()}</span>
-                </div>
-              </div>
-
-              {/* Order Details - Right Half */}
-              <div className="space-y-4">
-                <h4 className="text-md font-medium text-slate-800">Order Information</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField label="Brand PO">
-                    <Input
-                      value={formData.brandPO}
-                      onChange={(e) => setFormData({ ...formData, brandPO: e.target.value })}
-                      placeholder="Brand PO number"
-                    />
-                  </FormField>
-
-                  <FormField label="Created Date">
-                    <Input
-                      type="date"
-                      value={formData.createdDate}
-                      onChange={(e) => setFormData({ ...formData, createdDate: e.target.value })}
-                      icon={<Calendar className="w-4 h-4 text-slate-400" />}
-                    />
-                  </FormField>
-
-                  <FormField label="Start Ship Date">
-                    <Input
-                      type="date"
-                      value={formData.startShipDate}
-                      onChange={(e) => setFormData({ ...formData, startShipDate: e.target.value })}
-                      icon={<Calendar className="w-4 h-4 text-slate-400" />}
-                    />
-                  </FormField>
-
-                  <FormField label="Complete Date">
-                    <Input
-                      type="date"
-                      value={formData.completeDate}
-                      onChange={(e) => setFormData({ ...formData, completeDate: e.target.value })}
-                      icon={<Calendar className="w-4 h-4 text-slate-400" />}
-                    />
-                  </FormField>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Product Controls */}
-          <Card>
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Product Controls</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <FormField label="Category">
-                <div className="flex gap-2">
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="">Choose category...</option>
-                    {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                  <Button
-                    size="sm"
-                    onClick={() => applyToSelected("category", formData.category)}
-                    disabled={!formData.category}
-                  >
-                    Apply
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    onClick={() => applyToSelected("category", "")}
-                  >
-                    Clear
-                  </Button>
-                </div>
-              </FormField>
-
-              <FormField label="Preorder">
-                <div className="flex gap-2">
-                  <select
-                    value={formData.preorder}
-                    onChange={(e) => setFormData({ ...formData, preorder: e.target.value })}
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="false">No</option>
-                    <option value="true">Yes</option>
-                  </select>
-                  <Button
-                    size="sm"
-                    onClick={() => applyToSelected("preorder", formData.preorder === "true")}
-                  >
-                    Apply
-                  </Button>
-                </div>
-              </FormField>
-
-              <FormField label="Standard Sizing">
-                <div className="flex gap-2">
-                  <select
-                    value={formData.sizing}
-                    onChange={(e) => setFormData({ ...formData, sizing: e.target.value })}
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                  >
-                    {sizingOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <Button size="sm" onClick={applyStandardSizing}>
-                    Apply
-                  </Button>
-                </div>
-              </FormField>
-            </div>
-          </Card>
-
-          {/* Products Table */}
-          {products.length > 0 && (
-            <Card padding="none">
-              <div className="p-6 border-b border-slate-200">
-                <h3 className="text-lg font-semibold text-slate-900">
-                  Products ({products.length})
-                </h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="px-4 py-3 text-left">
-                        <button
-                          onClick={handleSelectAll}
-                          className="flex items-center justify-center w-5 h-5 border border-slate-300 rounded hover:bg-slate-100"
-                        >
-                          {selectAll ? (
-                            <CheckSquare className="w-4 h-4 text-purple-600" />
-                          ) : (
-                            <Square className="w-4 h-4" />
-                          )}
-                        </button>
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Name
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Style
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Color
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Size
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Qty
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Cost
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Retail
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        SKU
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Barcode
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Season
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        P-Type
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Tags
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Preorder
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Margin
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        Total
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        S.S
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        C.S
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        J.S
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                        CAT
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {products.map((product, index) => (
-                      <tr key={product.id} className={getRowClassName(product, index)}>
-                        <td className="px-4 py-3">
-                          <button
-                            onClick={() => handleProductSelect(product.id)}
-                            className="flex items-center justify-center w-5 h-5 border border-slate-300 rounded hover:bg-slate-100"
-                          >
-                            {product.selected ? (
-                              <CheckSquare className="w-4 h-4 text-purple-600" />
-                            ) : (
-                              <Square className="w-4 h-4" />
-                            )}
-                          </button>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-900">{product.name}</td>
-                        <td className="px-4 py-3 text-sm text-slate-600">{product.style}</td>
-                        <td className="px-4 py-3 text-sm text-slate-600">{product.color}</td>
-                        <td className="px-4 py-3 text-sm text-slate-600">{product.size}</td>
-                        <td className="px-4 py-3 text-sm text-slate-900 font-medium">
-                          {product.quantity}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-900">
-                          ${product.cost.toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-900">
-                          ${product.retail.toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-600 font-mono">
-                          {product.sku}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-600 font-mono">
-                          {product.barcode}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-600">{product.season}</td>
-                        <td className="px-4 py-3 text-sm text-slate-600">{product.category}</td>
-                        <td
-                          className="px-4 py-3 text-sm text-slate-600 max-w-32 truncate"
-                          title={product.tags}
-                        >
-                          {product.tags}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                              product.preorder
-                                ? "bg-red-100 text-red-800"
-                                : "bg-green-100 text-green-800"
-                            }`}
-                          >
-                            {product.preorder ? "Yes" : "No"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-900">
-                          {product.margin.toFixed(1)}%
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-900 font-medium">
-                          ${product.total.toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-600">{product.shoeSize}</td>
-                        <td className="px-4 py-3 text-sm text-slate-600">{product.clothingSize}</td>
-                        <td className="px-4 py-3 text-sm text-slate-600">{product.jeansSize}</td>
-                        <td className="px-4 py-3 text-sm text-slate-600">{product.metaCategory}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          )}
-
-          {/* Financial Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Credits */}
-            <Card>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900">Credits</h3>
-                <Button size="sm" onClick={addCredit} className="flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  Add Credit
-                </Button>
-              </div>
-              <div className="space-y-3">
-                {credits.map((credit) => (
-                  <div key={credit.id} className="flex gap-2 items-center">
-                    <Input
-                      type="date"
-                      value={credit.date}
-                      onChange={(e) => updateCredit(credit.id, "date", e.target.value)}
-                      className="flex-1"
-                    />
-                    <Input
-                      placeholder="Description"
-                      value={credit.description}
-                      onChange={(e) => updateCredit(credit.id, "description", e.target.value)}
-                      className="flex-1"
-                    />
-                    <select
-                      value={credit.method}
-                      onChange={(e) => updateCredit(credit.id, "method", e.target.value)}
-                      className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value="cash">Cash</option>
-                      <option value="credit">Credit Card</option>
-                    </select>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="Amount"
-                      value={credit.amount || ""}
-                      onChange={(e) =>
-                        updateCredit(credit.id, "amount", parseFloat(e.target.value) || 0)
-                      }
-                      icon={<DollarSign className="w-4 h-4 text-slate-400" />}
-                      className="w-32"
-                    />
-                    <Button size="sm" variant="danger" onClick={() => removeCredit(credit.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            {/* Payments */}
-            <Card>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900">Payments</h3>
-                <Button size="sm" onClick={addPayment} className="flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  Add Payment
-                </Button>
-              </div>
-              <div className="space-y-3">
-                {payments.map((payment) => (
-                  <div key={payment.id} className="flex gap-2 items-center">
-                    <Input
-                      type="date"
-                      value={payment.date}
-                      onChange={(e) => updatePayment(payment.id, "date", e.target.value)}
-                      className="flex-1"
-                    />
-                    <Input
-                      placeholder="Description"
-                      value={payment.description}
-                      onChange={(e) => updatePayment(payment.id, "description", e.target.value)}
-                      className="flex-1"
-                    />
-                    <select
-                      value={payment.method}
-                      onChange={(e) => updatePayment(payment.id, "method", e.target.value)}
-                      className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value="cash">Cash</option>
-                      <option value="credit">Credit Card</option>
-                    </select>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="Amount"
-                      value={payment.amount || ""}
-                      onChange={(e) =>
-                        updatePayment(payment.id, "amount", parseFloat(e.target.value) || 0)
-                      }
-                      icon={<DollarSign className="w-4 h-4 text-slate-400" />}
-                      className="w-32"
-                    />
-                    <Button size="sm" variant="danger" onClick={() => removePayment(payment.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </Card>
+    <Layout title="New Purchase Order">
+      <div className="w-full px-6 py-6 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">
+              New Purchase Order
+              <span className="ml-3 bg-yellow-100 text-yellow-800 text-sm font-medium px-2.5 py-0.5 rounded">
+                DRAFT
+              </span>
+            </h1>
+            <p className="text-slate-600 mt-1">Import and create a new purchase order from Excel file</p>
           </div>
-
-          {/* Notes and Totals */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <FormField label="Notes">
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  rows={6}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  placeholder="Add any notes about this order..."
-                />
-              </FormField>
-            </Card>
-
-            <Card>
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Order Totals</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Sub-Total:</span>
-                  <span className="font-medium">${totals.subTotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Payments:</span>
-                  <span className="font-medium">${totals.paymentTotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Credits:</span>
-                  <span className="font-medium">${totals.creditTotal.toFixed(2)}</span>
-                </div>
-                <hr className="border-slate-200" />
-                <div className="flex justify-between text-lg font-bold">
-                  <span>Total Balance Due:</span>
-                  <span className="text-purple-600">${totals.grandTotal.toFixed(2)}</span>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Save Button */}
-          <Card className="text-center">
+          <div className="flex space-x-3">
+            <div className="relative">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileSelect}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+              <Button variant="outline" className="flex items-center gap-2">
+                <FileSpreadsheet className="w-4 h-4" />
+                {selectedFile ? selectedFile.name : "Choose Excel File"}
+              </Button>
+            </div>
             <Button
-              size="lg"
-              onClick={handleSave}
+              onClick={handleFileUpload}
               isLoading={isLoading}
-              disabled={submitSuccess}
-              className="flex items-center gap-2 mx-auto"
+              disabled={!selectedFile}
             >
-              <Save className="w-5 h-5" />
-              {submitSuccess ? "Order Submitted Successfully" : "Save Draft Order"}
+              <Upload className="w-4 h-4 mr-2" />
+              Upload
             </Button>
-          </Card>
+          </div>
         </div>
 
-        <div className="w-80 shrink-0 space-y-6">
-          {/* Server Messages column */}
-          {serverMessages.length > 0 && (
-            <div className="w-80 shrink-0">
-              <Card className="bg-white border border-slate-200 shadow-sm max-h-[75vh] overflow-y-auto">
-                <h3 className="text-sm font-semibold text-slate-900 px-4 pt-4">Server Messages</h3>
-                <div className="p-4 space-y-2">
-                  {serverMessages.slice(-10).map((msg, index) => (
-                    <p
-                      key={index}
-                      className={`text-xs ${msg.isError ? "text-red-600" : "text-green-600"}`}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Main Content */}
+          <div className="lg:col-span-3 space-y-6">
+            {/* Status Messages */}
+            {error && (
+              <Card className="border-red-200 bg-red-50">
+                <div className="flex items-center space-x-2 text-red-700">
+                  <AlertCircle className="w-5 h-5" />
+                  <span>{error}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setError('')}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </Card>
+            )}
+
+            {success && (
+              <Card className="border-green-200 bg-green-50">
+                <div className="flex items-center space-x-2 text-green-700">
+                  <CheckCircle className="w-5 h-5" />
+                  <span>{success}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSuccess('')}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </Card>
+            )}
+
+            {/* Summary Cards */}
+            {products.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatusCard
+                  title="Total Products"
+                  value={totalProducts}
+                  icon={Package}
+                  color="blue"
+                />
+                <StatusCard
+                  title="Unique Styles"
+                  value={uniqueStyles}
+                  icon={Tag}
+                  color="green"
+                />
+                <StatusCard
+                  title="Total Cost"
+                  value={`$${totalCost.toFixed(2)}`}
+                  icon={DollarSign}
+                  color="purple"
+                />
+                <StatusCard
+                  title="Avg Margin"
+                  value={`${avgMargin.toFixed(1)}%`}
+                  icon={Percent}
+                  color="orange"
+                />
+              </div>
+            )}
+
+            {/* Vendor Selection */}
+            <Card>
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Vendor Information</h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="vendorType"
+                      value="existing"
+                      checked={formData.vendorType === "existing"}
+                      onChange={(e) => setFormData({ ...formData, vendorType: e.target.value })}
+                      className="text-purple-600"
+                    />
+                    <span className="font-medium">Existing Brand</span>
+                  </label>
+                  <select
+                    value={formData.selectedVendor}
+                    onChange={(e) => setFormData({ ...formData, selectedVendor: e.target.value })}
+                    disabled={formData.vendorType !== "existing"}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-slate-100"
+                  >
+                    <option value="">Choose vendor...</option>
+                    {vendors.map((vendor) => (
+                      <option key={vendor} value={vendor}>
+                        {vendor}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="vendorType"
+                      value="new"
+                      checked={formData.vendorType === "new"}
+                      onChange={(e) => setFormData({ ...formData, vendorType: e.target.value })}
+                      className="text-purple-600"
+                    />
+                    <span className="font-medium">New Brand</span>
+                  </label>
+                  <Input
+                    value={formData.newVendor}
+                    onChange={(e) => setFormData({ ...formData, newVendor: e.target.value })}
+                    disabled={formData.vendorType !== "new"}
+                    placeholder="Enter new vendor name"
+                  />
+                </div>
+              </div>
+            </Card>
+
+            {/* Season Constructor & Order Details */}
+            <Card>
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Season & Order Details</h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Season Constructor - Left Half */}
+                <div className="space-y-4">
+                  <h4 className="text-md font-medium text-slate-800">Season Constructor</h4>
+                  <div className="flex gap-2 items-end">
+                    <FormField label="Season">
+                      <select
+                        value={formData.season}
+                        onChange={(e) => setFormData({ ...formData, season: e.target.value })}
+                        className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 w-28"
+                      >
+                        {seasonOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </FormField>
+
+                    <FormField label="Brand">
+                      <select
+                        value={formData.brandSeason}
+                        onChange={(e) => setFormData({ ...formData, brandSeason: e.target.value })}
+                        className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 flex-1 min-w-0"
+                      >
+                        <option value="">Select Brand...</option>
+                        {vendors.map((vendor) => (
+                          <option key={vendor} value={vendor}>
+                            {vendor}
+                          </option>
+                        ))}
+                      </select>
+                    </FormField>
+
+                    <FormField label="Year">
+                      <select
+                        value={formData.yearSeason}
+                        onChange={(e) => setFormData({ ...formData, yearSeason: e.target.value })}
+                        className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 w-20"
+                      >
+                        {yearOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </FormField>
+
+                    <Button size="sm" onClick={applySeason}>
+                      Apply
+                    </Button>
+                  </div>
+
+                  {/* Season Preview */}
+                  <div className="mt-3 p-3 bg-slate-50 rounded-lg">
+                    <span className="text-sm text-slate-600">Preview: </span>
+                    <span className="font-medium text-slate-900">{constructSeason()}</span>
+                  </div>
+                </div>
+
+                {/* Order Details - Right Half */}
+                <div className="space-y-4">
+                  <h4 className="text-md font-medium text-slate-800">Order Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField label="Brand PO">
+                      <Input
+                        value={formData.brandPO}
+                        onChange={(e) => setFormData({ ...formData, brandPO: e.target.value })}
+                        placeholder="Brand PO number"
+                      />
+                    </FormField>
+
+                    <FormField label="Created Date">
+                      <Input
+                        type="date"
+                        value={formData.createdDate}
+                        onChange={(e) => setFormData({ ...formData, createdDate: e.target.value })}
+                        icon={<Calendar className="w-4 h-4 text-slate-400" />}
+                      />
+                    </FormField>
+
+                    <FormField label="Start Ship Date">
+                      <Input
+                        type="date"
+                        value={formData.startShipDate}
+                        onChange={(e) => setFormData({ ...formData, startShipDate: e.target.value })}
+                        icon={<Calendar className="w-4 h-4 text-slate-400" />}
+                      />
+                    </FormField>
+
+                    <FormField label="Complete Date">
+                      <Input
+                        type="date"
+                        value={formData.completeDate}
+                        onChange={(e) => setFormData({ ...formData, completeDate: e.target.value })}
+                        icon={<Calendar className="w-4 h-4 text-slate-400" />}
+                      />
+                    </FormField>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Product Controls */}
+            <Card>
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Product Controls</h3>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <FormField label="Category">
+                  <div className="flex gap-2">
+                    <select
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     >
-                      {msg.message}
-                    </p>
+                      <option value="">Choose category...</option>
+                      {categories.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      size="sm"
+                      onClick={() => applyToSelected("category", formData.category)}
+                      disabled={!formData.category}
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                </FormField>
+
+                <FormField label="Preorder">
+                  <div className="flex gap-2">
+                    <select
+                      value={formData.preorder}
+                      onChange={(e) => setFormData({ ...formData, preorder: e.target.value })}
+                      className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="false">No</option>
+                      <option value="true">Yes</option>
+                    </select>
+                    <Button
+                      size="sm"
+                      onClick={() => applyToSelected("preorder", formData.preorder === "true")}
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                </FormField>
+
+                <FormField label="Standard Sizing">
+                  <div className="flex gap-2">
+                    <select
+                      value={formData.sizing}
+                      onChange={(e) => setFormData({ ...formData, sizing: e.target.value })}
+                      className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    >
+                      {sizingOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <Button size="sm" onClick={applyStandardSizing}>
+                      Apply
+                    </Button>
+                  </div>
+                </FormField>
+              </div>
+            </Card>
+
+            {/* Products Table */}
+            {products.length > 0 && (
+              <Card padding="none">
+                <div className="p-6 border-b border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-slate-900">
+                      Products ({products.length})
+                    </h3>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={handleSelectAll}
+                        className="flex items-center justify-center w-5 h-5 border border-slate-300 rounded hover:bg-slate-100"
+                      >
+                        {selectAll ? (
+                          <CheckSquare className="w-4 h-4 text-purple-600" />
+                        ) : (
+                          <Square className="w-4 h-4" />
+                        )}
+                      </button>
+                      <span className="text-sm text-slate-600">Select All</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-slate-50 border-b border-slate-200">
+                      <tr>
+                        <th className="px-4 py-3 text-left">
+                          <span className="sr-only">Select</span>
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          Name
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          Style
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          Color
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          Size
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          Qty
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          Cost
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          Retail
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          SKU
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          Barcode
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          Season
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          P-Type
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          Tags
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          Preorder
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          Margin
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          Total
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          S.S
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          C.S
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          J.S
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          CAT
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {products.map((product, index) => (
+                        <tr key={product.id} className={getRowClassName(product, index)}>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => handleProductSelect(product.id)}
+                              className="flex items-center justify-center w-5 h-5 border border-slate-300 rounded hover:bg-slate-100"
+                            >
+                              {product.selected ? (
+                                <CheckSquare className="w-4 h-4 text-purple-600" />
+                              ) : (
+                                <Square className="w-4 h-4" />
+                              )}
+                            </button>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-900">{product.name}</td>
+                          <td className="px-4 py-3 text-sm text-slate-600">{product.style}</td>
+                          <td className="px-4 py-3 text-sm text-slate-600">{product.color}</td>
+                          <td className="px-4 py-3 text-sm text-slate-600">{product.size}</td>
+                          <td className="px-4 py-3 text-sm text-slate-900 font-medium">
+                            {product.quantity}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-900">
+                            ${product.cost.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-900">
+                            ${product.retail.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-600 font-mono">
+                            {product.sku}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-600 font-mono">
+                            {product.barcode}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-600">{product.season}</td>
+                          <td className="px-4 py-3 text-sm text-slate-600">{product.category}</td>
+                          <td
+                            className="px-4 py-3 text-sm text-slate-600 max-w-32 truncate"
+                            title={product.tags}
+                          >
+                            {product.tags}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                                product.preorder
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-green-100 text-green-800"
+                              }`}
+                            >
+                              {product.preorder ? "Yes" : "No"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-900">
+                            {product.margin.toFixed(1)}%
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-900 font-medium">
+                            ${product.total.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-600">{product.shoeSize}</td>
+                          <td className="px-4 py-3 text-sm text-slate-600">{product.clothingSize}</td>
+                          <td className="px-4 py-3 text-sm text-slate-600">{product.jeansSize}</td>
+                          <td className="px-4 py-3 text-sm text-slate-600">{product.metaCategory}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            )}
+
+            {/* Financial Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Credits */}
+              <Card>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-slate-900">Credits</h3>
+                  <Button size="sm" onClick={addCredit} className="flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    Add Credit
+                  </Button>
+                </div>
+                <div className="space-y-3">
+                  {credits.map((credit) => (
+                    <div key={credit.id} className="flex gap-2 items-center">
+                      <Input
+                        type="date"
+                        value={credit.date}
+                        onChange={(e) => updateCredit(credit.id, "date", e.target.value)}
+                        className="flex-1"
+                      />
+                      <Input
+                        placeholder="Description"
+                        value={credit.description}
+                        onChange={(e) => updateCredit(credit.id, "description", e.target.value)}
+                        className="flex-1"
+                      />
+                      <select
+                        value={credit.method}
+                        onChange={(e) => updateCredit(credit.id, "method", e.target.value)}
+                        className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="cash">Cash</option>
+                        <option value="credit">Credit Card</option>
+                      </select>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Amount"
+                        value={credit.amount || ""}
+                        onChange={(e) =>
+                          updateCredit(credit.id, "amount", parseFloat(e.target.value) || 0)
+                        }
+                        icon={<DollarSign className="w-4 h-4 text-slate-400" />}
+                        className="w-32"
+                      />
+                      <Button size="sm" variant="danger" onClick={() => removeCredit(credit.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              {/* Payments */}
+              <Card>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-slate-900">Payments</h3>
+                  <Button size="sm" onClick={addPayment} className="flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    Add Payment
+                  </Button>
+                </div>
+                <div className="space-y-3">
+                  {payments.map((payment) => (
+                    <div key={payment.id} className="flex gap-2 items-center">
+                      <Input
+                        type="date"
+                        value={payment.date}
+                        onChange={(e) => updatePayment(payment.id, "date", e.target.value)}
+                        className="flex-1"
+                      />
+                      <Input
+                        placeholder="Description"
+                        value={payment.description}
+                        onChange={(e) => updatePayment(payment.id, "description", e.target.value)}
+                        className="flex-1"
+                      />
+                      <select
+                        value={payment.method}
+                        onChange={(e) => updatePayment(payment.id, "method", e.target.value)}
+                        className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="cash">Cash</option>
+                        <option value="credit">Credit Card</option>
+                      </select>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Amount"
+                        value={payment.amount || ""}
+                        onChange={(e) =>
+                          updatePayment(payment.id, "amount", parseFloat(e.target.value) || 0)
+                        }
+                        icon={<DollarSign className="w-4 h-4 text-slate-400" />}
+                        className="w-32"
+                      />
+                      <Button size="sm" variant="danger" onClick={() => removePayment(payment.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   ))}
                 </div>
               </Card>
             </div>
-          )}
-        </div>
 
-        {/* closes the flex container */}
+            {/* Notes and Totals */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <FormField label="Notes">
+                  <textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    rows={6}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    placeholder="Add any notes about this order..."
+                  />
+                </FormField>
+              </Card>
+
+              <Card>
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Order Totals</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Sub-Total:</span>
+                    <span className="font-medium">${totals.subTotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Payments:</span>
+                    <span className="font-medium">${totals.paymentTotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Credits:</span>
+                    <span className="font-medium">${totals.creditTotal.toFixed(2)}</span>
+                  </div>
+                  <hr className="border-slate-200" />
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total Balance Due:</span>
+                    <span className="text-purple-600">${totals.grandTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Save Button */}
+            <Card className="text-center">
+              <Button
+                size="lg"
+                onClick={handleSave}
+                isLoading={isLoading}
+                disabled={submitSuccess}
+                className="flex items-center gap-2 mx-auto"
+              >
+                <Save className="w-5 h-5" />
+                {submitSuccess ? "Order Submitted Successfully" : "Save Draft Order"}
+              </Button>
+            </Card>
+
+            {/* Empty State */}
+            {products.length === 0 && !isLoading && (
+              <Card className="text-center py-12">
+                <FileSpreadsheet className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">No Products Loaded</h3>
+                <p className="text-slate-600 mb-6">
+                  Upload an Excel file containing product data to get started.
+                </p>
+                <div className="text-sm text-slate-500">
+                  <p className="mb-2">Expected Excel format:</p>
+                  <ul className="space-y-1">
+                    <li>• Style Name, Style Number, Color columns</li>
+                    <li>• Size columns between Country of Origin and Sugg. Retail</li>
+                    <li>• WholeSale and Sugg. Retail price columns</li>
+                    <li>• Quantity values in size columns</li>
+                  </ul>
+                </div>
+              </Card>
+            )}
+
+            {/* Loading State */}
+            {isLoading && (
+              <Card className="text-center py-12">
+                <RefreshCw className="w-16 h-16 text-slate-400 mx-auto mb-4 animate-spin" />
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">Processing Data</h3>
+                <p className="text-slate-600">Please wait while we process your Excel file...</p>
+              </Card>
+            )}
+          </div>
+
+          {/* Server Messages Panel */}
+          <div className="lg:col-span-1">
+            <ServerMessagePanel className="h-[600px]" />
+          </div>
+        </div>
       </div>
     </Layout>
   );
