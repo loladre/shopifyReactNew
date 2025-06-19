@@ -322,34 +322,20 @@ export default function EditPublishedOrder() {
   };
 
   const updateTagsForSeason = (newSeasonValue: string) => {
-    const updatedProducts = products.map((product) => ({
-      ...product,
-      productVariants: product.productVariants.map((variant) => {
-        let newTags = newSeasonValue;
-        
-        // If preorder is true, add preorder tag
-        if (variant.variantPreOrder) {
-          newTags += `,${generatePreorderTag(newStartShipDate)}`;
-        }
-        
-        return {
-          ...variant,
-          updateVariantFlag: true,
-        };
-      }),
-      productTags: (() => {
-        let newTags = newSeasonValue;
-        
-        // Check if any variant in this product has preorder true
-        const hasPreorder = product.productVariants.some(v => v.variantPreOrder);
-        if (hasPreorder) {
-          newTags += `,${generatePreorderTag(newStartShipDate)}`;
-        }
-        
-        return newTags;
-      })(),
-      updateProductFlag: true,
-    }));
+    const updatedProducts = [...products];
+    
+    updatedProducts.forEach(product => {
+      // Update the product tags with the new season
+      // If there's a comma, replace everything before it with the new season
+      if (product.productTags.includes(',')) {
+        product.productTags = newSeasonValue + product.productTags.substring(product.productTags.indexOf(','));
+      } else {
+        // If no comma, just replace the entire tag with the new season
+        product.productTags = newSeasonValue;
+      }
+      
+      product.updateProductFlag = true;
+    });
     
     setProducts(updatedProducts);
   };
@@ -357,70 +343,61 @@ export default function EditPublishedOrder() {
   const updateTagsForPreorder = (productIndex: number, variantIndex: number, isPreorder: boolean) => {
     const updatedProducts = [...products];
     const product = updatedProducts[productIndex];
-    const currentSeason = order?.purchaseOrderSeason || constructSeason();
+    const productName = product.productName;
     
-    // Update all variants of the same product
-    product.productVariants.forEach((variant, vIndex) => {
-      if (vIndex === variantIndex) {
-        // Update the specific variant
-        variant.variantPreOrder = isPreorder;
+    // Update all products with the same name
+    updatedProducts.forEach(p => {
+      if (p.productName === productName) {
+        // Update all variants of this product
+        p.productVariants.forEach(v => {
+          v.variantPreOrder = isPreorder;
+          v.updateVariantFlag = true;
+        });
+        
+        // Update the product tags
+        if (isPreorder) {
+          // If changing to preorder, add preorder tag
+          if (p.productTags.includes(',')) {
+            // If there's already a comma, replace everything after it
+            p.productTags = p.productTags.substring(0, p.productTags.indexOf(',')) + 
+                           `,${generatePreorderTag(newStartShipDate)}`;
+          } else {
+            // If no comma, add the preorder tag with a comma
+            p.productTags = p.productTags + `,${generatePreorderTag(newStartShipDate)}`;
+          }
+        } else {
+          // If changing from preorder to not preorder, remove preorder tag
+          if (p.productTags.includes(',')) {
+            // Remove everything after the first comma
+            p.productTags = p.productTags.substring(0, p.productTags.indexOf(','));
+          }
+        }
+        
+        p.updateProductFlag = true;
       }
-      
-      let newTags = currentSeason;
-      
-      // Check if this variant should have preorder tag
-      const shouldHavePreorder = vIndex === variantIndex ? isPreorder : variant.variantPreOrder;
-      if (shouldHavePreorder) {
-        newTags += `,${generatePreorderTag(newStartShipDate)}`;
-      }
-      
-      variant.updateVariantFlag = true;
     });
-    
-    // Update product tags based on whether any variant has preorder
-    const hasAnyPreorder = product.productVariants.some(v => v.variantPreOrder);
-    let productTags = currentSeason;
-    if (hasAnyPreorder) {
-      productTags += `,${generatePreorderTag(newStartShipDate)}`;
-    }
-    
-    product.productTags = productTags;
-    product.updateProductFlag = true;
     
     setProducts(updatedProducts);
   };
 
   const updateTagsForStartShipDate = (newStartShip: string) => {
-    const updatedProducts = products.map((product) => ({
-      ...product,
-      productVariants: product.productVariants.map((variant) => {
-        const currentSeason = order?.purchaseOrderSeason || constructSeason();
-        let newTags = currentSeason;
-        
-        // If preorder is true, add updated preorder tag with new date
-        if (variant.variantPreOrder) {
-          newTags += `,${generatePreorderTag(newStartShip)}`;
+    const formattedNewDate = formatDateForTags(newStartShip);
+    const updatedProducts = [...products];
+    
+    updatedProducts.forEach(product => {
+      // Only update tags for products that have preorder in their tags
+      if (product.productTags.includes('preorder')) {
+        // Find the "Ships by" part and replace the date
+        const tagParts = product.productTags.split('Ships by ');
+        if (tagParts.length > 1) {
+          // Replace the date part
+          const datePart = tagParts[1];
+          const restOfTag = datePart.includes(',') ? datePart.substring(datePart.indexOf(',')) : '';
+          product.productTags = tagParts[0] + 'Ships by ' + formattedNewDate + restOfTag;
+          product.updateProductFlag = true;
         }
-        
-        return {
-          ...variant,
-          updateVariantFlag: true,
-        };
-      }),
-      productTags: (() => {
-        const currentSeason = order?.purchaseOrderSeason || constructSeason();
-        let newTags = currentSeason;
-        
-        // Check if any variant in this product has preorder true
-        const hasPreorder = product.productVariants.some(v => v.variantPreOrder);
-        if (hasPreorder) {
-          newTags += `,${generatePreorderTag(newStartShip)}`;
-        }
-        
-        return newTags;
-      })(),
-      updateProductFlag: true,
-    }));
+      }
+    });
     
     setProducts(updatedProducts);
   };
