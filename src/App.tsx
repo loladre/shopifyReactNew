@@ -134,8 +134,18 @@ function LoginPage() {
         <div className="bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-8 transition-all duration-300 hover:shadow-3xl hover:bg-white/15">
           {/* Logo and header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mb-4 shadow-lg">
-              <ShoppingBag className="w-8 h-8 text-white" />
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full mb-4 shadow-lg">
+              <img 
+                src="/logo.png" 
+                alt="Lola Dré" 
+                className="w-12 h-12 object-contain"
+                onError={(e) => {
+                  // Fallback to icon if logo fails to load
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+              <ShoppingBag className="w-8 h-8 text-purple-600 hidden" />
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">Lola Dré</h1>
             <p className="text-white/70 text-sm font-medium">

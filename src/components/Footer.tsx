@@ -11,8 +11,18 @@ export default function Footer() {
           {/* Brand Section */}
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
-              <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg">
-                <Heart className="w-4 h-4 text-white" />
+              <div className="flex items-center justify-center w-8 h-8 bg-white rounded-lg border border-slate-200 shadow-sm">
+                <img 
+                  src="/logo.png" 
+                  alt="Lola Dré" 
+                  className="w-6 h-6 object-contain"
+                  onError={(e) => {
+                    // Fallback to icon if logo fails to load
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+                <Heart className="w-4 h-4 text-purple-600 hidden" />
               </div>
               <span className="text-lg font-bold text-slate-900">Lola Dré</span>
             </div>

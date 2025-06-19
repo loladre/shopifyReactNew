@@ -31,8 +31,18 @@ export default function Header() {
         <div className="flex justify-between items-center h-16">
           {/* Logo and Brand */}
           <Link to="/" className="flex items-center space-x-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl shadow-lg">
-              <ShoppingBag className="w-6 h-6 text-white" />
+            <div className="flex items-center justify-center w-10 h-10 bg-white rounded-xl shadow-lg border border-slate-200">
+              <img 
+                src="/logo.png" 
+                alt="Lola Dré" 
+                className="w-8 h-8 object-contain"
+                onError={(e) => {
+                  // Fallback to icon if logo fails to load
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+              <ShoppingBag className="w-6 h-6 text-purple-600 hidden" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-slate-900">Lola Dré</h1>
