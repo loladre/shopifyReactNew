@@ -325,7 +325,6 @@ export default function PurchaseOrderImport() {
     }
     return `${season}${yearSeason}`;
   };
-
   const constructTags = (product: Product) => {
     const season = constructSeason();
     let tags = [season];
@@ -333,7 +332,8 @@ export default function PurchaseOrderImport() {
     if (product.preorder) {
       tags.push("preorder");
       if (formData.startShipDate) {
-        tags.push(`Message2:282727:Ships by ${formData.startShipDate}`);
+        const usFormattedDate = formatDateToUS(formData.startShipDate);
+        tags.push(`Message2:282727:Ships by ${usFormattedDate}`);
       }
     }
 
@@ -632,6 +632,17 @@ export default function PurchaseOrderImport() {
       return "";
     }
   };
+  const formatDateToUS = (isoDate: string) => {
+    try {
+      const date = new Date(isoDate);
+      const month = (date.getMonth() + 1).toString().padStart(2, "0");
+      const day = date.getDate().toString().padStart(2, "0");
+      const year = date.getFullYear();
+      return `${month}/${day}/${year}`;
+    } catch {
+      return isoDate;
+    }
+  };
 
   const calculateTotals = () => {
     const subTotal = products.reduce((sum, product) => sum + product.total, 0);
@@ -657,40 +668,55 @@ export default function PurchaseOrderImport() {
   };
 
   const applyToSelected = (field: string, value: any) => {
-    const selectedProducts = products.filter((p) => p.selected);
+    const selectedNames = new Set(products.filter((p) => p.selected).map((p) => p.name));
 
-    // If only one product is selected and we're changing the category
-    if (field === "category" && selectedProducts.length === 1) {
-      const styleName = selectedProducts[0].name;
-      setProducts(
-        products.map((product) => {
-          if (product.name === styleName) {
-            const updatedProduct = { ...product, [field]: value };
-            updatedProduct.metaCategory = getMetaCategory(value);
+    setProducts(
+      products.map((product) => {
+        // --- PREORDER APPLY ---
+        if (field === "preorder") {
+          if (product.selected) {
+            const updatedProduct = { ...product, preorder: value };
+            updatedProduct.tags = constructTags(updatedProduct);
+            return updatedProduct;
+          }
+
+          if (selectedNames.has(product.name)) {
+            const updatedProduct = { ...product };
+            // 🛠 Temporarily override preorder for tags only
+            const tagSimulatedProduct = { ...updatedProduct, preorder: value };
+            updatedProduct.tags = constructTags(tagSimulatedProduct);
+            return updatedProduct;
+          }
+
+          return product;
+        }
+
+        // --- CATEGORY APPLY ---
+        if (field === "category") {
+          if (selectedNames.has(product.name)) {
+            const shouldClearSizing = product.category !== value;
+            const updatedProduct: Product = {
+              ...product,
+              category: value,
+              metaCategory: getMetaCategory(value),
+            };
+
+            if (shouldClearSizing) {
+              updatedProduct.shoeSize = "";
+              updatedProduct.clothingSize = "";
+              updatedProduct.jeansSize = "";
+            }
+
             return updatedProduct;
           }
           return product;
-        })
-      );
-      return;
-    }
-
-    // Default behavior for multi-select
-    setProducts(
-      products.map((product) => {
-        if (product.selected) {
-          const updatedProduct = { ...product, [field]: value };
-
-          if (field === "category") {
-            updatedProduct.metaCategory = getMetaCategory(value);
-          }
-
-          if (field === "preorder") {
-            updatedProduct.tags = constructTags(updatedProduct);
-          }
-
-          return updatedProduct;
         }
+
+        // --- DEFAULT APPLY FOR OTHER FIELDS ---
+        if (product.selected) {
+          return { ...product, [field]: value };
+        }
+
         return product;
       })
     );
@@ -1201,19 +1227,6 @@ export default function PurchaseOrderImport() {
         <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-5 space-y-6">
-            {/* Status Messages */}
-            {error && (
-              <Card className="border-red-200 bg-red-50">
-                <div className="flex items-center space-x-2 text-red-700">
-                  <AlertCircle className="w-5 h-5" />
-                  <span>{error}</span>
-                  <Button variant="ghost" size="sm" onClick={() => setError("")}>
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              </Card>
-            )}
-
             {success && (
               <Card className="border-green-200 bg-green-50">
                 <div className="flex items-center space-x-2 text-green-700">
@@ -1786,6 +1799,18 @@ export default function PurchaseOrderImport() {
                 </div>
               </Card>
             </div>
+            {/* Status Messages */}
+            {error && (
+              <Card className="border-red-200 bg-red-50">
+                <div className="flex items-center space-x-2 text-red-700">
+                  <AlertCircle className="w-5 h-5" />
+                  <span>{error}</span>
+                  <Button variant="ghost" size="sm" onClick={() => setError("")}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </Card>
+            )}
 
             {/* Save Button */}
             <Card className="text-center">
