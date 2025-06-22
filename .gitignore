@@ -31,12 +31,3 @@ dist-ssr
 .env.production.local
 .env.dev
 
-# Pages
-BulkDiscount.tsx
-BulkDiscountReverse.tsx
-Counts.tsx
-Dashboard.tsx
-DraftOrderDetail.tsx
-DraftOrders.tsx
-Excellimport.tsx
-LateOrders.tsx
