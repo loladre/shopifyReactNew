@@ -82,10 +82,10 @@ export default function SellThroughData() {
         return;
       }
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/sellThroughUniqueValues`, {
+      const response = await fetch(`${apiBaseUrl}${basePath}/sellThroughUniqueValues`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -111,8 +111,8 @@ export default function SellThroughData() {
       setError("");
 
       const token = localStorage.getItem("bridesbyldToken");
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
       const searchCriteria = {
         season: selectedSeason,
@@ -120,7 +120,7 @@ export default function SellThroughData() {
         sellThroughDate: selectedDate,
       };
 
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/sellThroughSearchEndpoint`, {
+      const response = await fetch(`${apiBaseUrl}${basePath}/sellThroughSearchEndpoint`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

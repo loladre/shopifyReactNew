@@ -85,9 +85,9 @@ export default function PublishedOrderDetail() {
   const [isSaving, setIsSaving] = useState(false);
 
   // Edit states
-  const [isEditingSeason, setIsEditingSeason] = useState(false);
+
   const [isEditingCancelDate, setIsEditingCancelDate] = useState(false);
-  const [newSeason, setNewSeason] = useState("");
+
   const [newCancelDate, setNewCancelDate] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
 
@@ -118,11 +118,11 @@ export default function PublishedOrderDetail() {
         return;
       }
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
       const response = await fetch(
-        `${apiBaseUrl}${basePath}/shopify/getPublishedOrderById/${purchaseOrderId}`,
+        `${apiBaseUrl}${basePath}/getPublishedOrderById/${purchaseOrderId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -143,7 +143,6 @@ export default function PublishedOrderDetail() {
       const data: PublishedOrderDetail = await response.json();
       setOrder(data);
       setNewCancelDate(data.completedDate);
-      setNewSeason(data.purchaseOrderSeason);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -157,8 +156,11 @@ export default function PublishedOrderDetail() {
     try {
       setIsSaving(true);
       const token = localStorage.getItem("bridesbyldToken");
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
+      const shopifyAdminProductUrl =
+        import.meta.env.VITE_SHOPIFY_PRODUCT_ADMIN ||
+        "https://lola-dre.myshopify.com/admin/products/";
 
       // Prepare the update payload
       const updatePayload = {
@@ -182,7 +184,7 @@ export default function PublishedOrderDetail() {
       };
 
       const response = await fetch(
-        `${apiBaseUrl}${basePath}/shopify/updatePurchaseOrderByIdNoShopify/${order.purchaseOrderID}`,
+        `${apiBaseUrl}${basePath}/updatePurchaseOrderByIdNoShopify/${order.purchaseOrderID}`,
         {
           method: "POST",
           headers: {
@@ -326,6 +328,7 @@ export default function PublishedOrderDetail() {
   };
 
   // Product table columns
+  const shopifyAdminProductUrl = import.meta.env.VITE_SHOPIFY_PRODUCT_ADMIN;
   const productColumns: ProductTableColumn[] = [
     {
       key: "product.productName",
@@ -333,9 +336,7 @@ export default function PublishedOrderDetail() {
       sortable: true,
       render: (value, _, product) => (
         <a
-          href={`https://lola-dre.myshopify.com/admin/products/${product?.productShopifyGid
-            ?.split("/")
-            .pop()}`}
+          href={`${shopifyAdminProductUrl}${product?.productShopifyGid?.split("/").pop()}`}
           target="_blank"
           rel="noopener noreferrer"
           className="text-purple-600 hover:text-purple-800 font-medium"
@@ -535,38 +536,10 @@ export default function PublishedOrderDetail() {
                     <span className="text-slate-700">{order.brand}</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Leaf className="w-5 h-5 text-slate-400" />
                     <span className="font-semibold text-slate-900">Season:</span>
                     <span className="text-slate-700">{order.purchaseOrderSeason}</span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setIsEditingSeason(!isEditingSeason)}
-                    >
-                      <Edit className="w-3 h-3" />
-                    </Button>
                   </div>
-                  {isEditingSeason && (
-                    <div className="space-y-2">
-                      <Input
-                        value={newSeason}
-                        onChange={(e) => setNewSeason(e.target.value)}
-                        placeholder="Enter new season"
-                      />
-                      <div className="flex space-x-2">
-                        <Button size="sm" onClick={() => setIsEditingSeason(false)}>
-                          Save
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setIsEditingSeason(false)}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+
                   <div className="space-y-4">
                     <div className="flex items-center space-x-2">
                       <FileText className="w-5 h-5 text-slate-400" />

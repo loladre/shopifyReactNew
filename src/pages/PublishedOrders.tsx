@@ -83,18 +83,15 @@ export default function PublishedOrders() {
         return;
       }
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-      const response = await fetch(
-        `${apiBaseUrl}${basePath}/shopify/published-purchase-orders-summary`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await fetch(`${apiBaseUrl}${basePath}/published-purchase-orders-summary`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
       if (!response.ok) {
         throw new Error("Failed to fetch published orders");
@@ -121,10 +118,10 @@ export default function PublishedOrders() {
   const fetchVendors = async () => {
     try {
       const token = localStorage.getItem("bridesbyldToken");
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/vendors`, {
+      const response = await fetch(`${apiBaseUrl}${basePath}/vendors`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -160,11 +157,11 @@ export default function PublishedOrders() {
     try {
       setIsSearching(true);
       const token = localStorage.getItem("bridesbyldToken");
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
       // Create URL with search parameters
-      const url = new URL(`${apiBaseUrl}${basePath}/shopify/searchPublishedOrders`);
+      const url = new URL(`${apiBaseUrl}${basePath}/searchPublishedOrders`);
       url.searchParams.append("brand", searchFilters.brand || "Any");
       url.searchParams.append("productName", searchFilters.productName || "Any");
       url.searchParams.append("productStyleNumber", searchFilters.productStyleNumber || "Any");

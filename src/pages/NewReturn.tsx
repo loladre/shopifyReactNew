@@ -106,10 +106,10 @@ export default function NewReturn() {
         return;
       }
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/vendors`, {
+      const response = await fetch(`${apiBaseUrl}${basePath}/vendors`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -135,11 +135,11 @@ export default function NewReturn() {
 
     try {
       setIsLoading(true);
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
       const response = await fetch(
-        `${apiBaseUrl}${basePath}/shopify/getInformationByBarcode?barcode=${barcode}`,
+        `${apiBaseUrl}${basePath}/getInformationByBarcode?barcode=${barcode}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -277,8 +277,8 @@ export default function NewReturn() {
         formData.append("files", file);
       });
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
       const response = await fetch(`${apiBaseUrl}${basePath}/uploadfiles/invoicesAndOrders`, {
         method: "POST",
@@ -351,10 +351,10 @@ export default function NewReturn() {
         originalPurchaseOrder: originalPurchaseOrder,
       };
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/createReturnToVendor`, {
+      const response = await fetch(`${apiBaseUrl}${basePath}/createReturnToVendor`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

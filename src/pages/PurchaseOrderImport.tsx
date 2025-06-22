@@ -193,7 +193,7 @@ export default function PurchaseOrderImport() {
   }, []);
 
   const initializeWebSocket = (token: string) => {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
     // Initialize Socket.IO connection to the correct server endpoint
     const socketInstance = io(apiBaseUrl, {
@@ -283,10 +283,10 @@ export default function PurchaseOrderImport() {
   const loadVendors = async () => {
     try {
       const token = localStorage.getItem("bridesbyldToken");
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/vendors`, {
+      const response = await fetch(`${apiBaseUrl}${basePath}/vendors`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -302,10 +302,10 @@ export default function PurchaseOrderImport() {
   const loadCategories = async () => {
     try {
       const token = localStorage.getItem("bridesbyldToken");
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/productTypes`, {
+      const response = await fetch(`${apiBaseUrl}${basePath}/productTypes`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -396,8 +396,155 @@ export default function PurchaseOrderImport() {
     }
   };
 
+  // const processExcelData = async (worksheet: ExcelJS.Worksheet) => {
+  //   // Convert worksheet to array format for easier processing
+  //   const data: any[][] = [];
+  //   worksheet.eachRow((row, rowNumber) => {
+  //     const rowData: any[] = [];
+  //     row.eachCell((cell, colNumber) => {
+  //       rowData[colNumber - 1] = cell.value;
+  //     });
+  //     data[rowNumber - 1] = rowData;
+  //   });
+
+  //   // Find header positions
+  //   let headersPosition = data.findIndex(
+  //     (row) => row && row.some((cell) => cell && cell.toString().includes("Style Name"))
+  //   );
+
+  //   if (headersPosition === -1) {
+  //     setError("Invalid Excel format - Style Name column not found");
+  //     return;
+  //   }
+
+  //   const headers = data[headersPosition];
+  //   const styleNamePos = headers.findIndex((h) => h && h.toString().includes("Style Name"));
+  //   const styleNumberPos = headers.findIndex((h) => h && h.toString().includes("Style Number"));
+  //   const colorPos = headers.findIndex((h) => h && h.toString().includes("Color"));
+  //   const countryOfOriginPos = headers.findIndex(
+  //     (h) => h && h.toString().includes("Country of Origin")
+  //   );
+  //   const costPos = headers.findIndex((h) => h && h.toString().includes("WholeSale"));
+  //   const retailPos = headers.findIndex((h) => h && h.toString().includes("Sugg. Retail"));
+
+  //   if (styleNamePos === -1 || styleNumberPos === -1 || colorPos === -1) {
+  //     setError("Required columns not found in Excel file");
+  //     return;
+  //   }
+
+  //   // Find the range of size columns - they should be between Country of Origin and Sugg. Retail
+  //   const firstSizePos = countryOfOriginPos + 1;
+  //   const lastSizePos = retailPos - 1; // Stop before Sugg. Retail column
+
+  //   if (firstSizePos >= lastSizePos) {
+  //     setError("No size columns found between Country of Origin and Sugg. Retail");
+  //     return;
+  //   }
+
+  //   console.log(`Processing size columns from ${firstSizePos} to ${lastSizePos}`);
+  //   console.log("Size columns:", headers.slice(firstSizePos, lastSizePos + 1));
+
+  //   // Extract form data from Excel
+  //   updateFormFromExcel(data);
+
+  //   // Count products for SKU/barcode generation - count total quantity across all sizes
+  //   let totalQuantity = 0;
+  //   for (let i = headersPosition + 1; i < data.length; i++) {
+  //     if (!data[i] || !data[i][styleNamePos]) break;
+  //     for (let j = firstSizePos; j <= lastSizePos; j++) {
+  //       const quantity = data[i][j];
+  //       if (quantity && quantity !== "0" && quantity !== 0) {
+  //         const quantityNum = parseInt(quantity.toString()) || 0;
+  //         totalQuantity += quantityNum;
+  //       }
+  //     }
+  //   }
+
+  //   console.log(`Total quantity across all products: ${totalQuantity}`);
+
+  //   // Get SKUs and barcodes based on total quantity
+  //   const token = localStorage.getItem("bridesbyldToken");
+  //   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+  //   const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
+
+  //   const [skusResponse, barcodesResponse] = await Promise.all([
+  //     fetch(`${apiBaseUrl}${basePath}/getsku/${totalQuantity}`, {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     }),
+  //     fetch(`${apiBaseUrl}${basePath}/barcode/${totalQuantity}`, {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     }),
+  //   ]);
+
+  //   const skus = await skusResponse.json();
+  //   const barcodes = await barcodesResponse.json();
+
+  //   // Process products
+  //   const newProducts: Product[] = [];
+  //   let skuIndex = 0;
+  //   let barcodeIndex = 0;
+
+  //   for (let i = headersPosition + 1; i < data.length; i++) {
+  //     if (!data[i] || !data[i][styleNamePos]) break;
+
+  //     for (let j = firstSizePos; j <= lastSizePos; j++) {
+  //       const quantity = data[i][j];
+  //       if (quantity && quantity !== "0" && quantity !== 0) {
+  //         const cost = parseFloat(data[i][costPos]?.toString() || "0") || 0;
+  //         const retail = parseFloat(data[i][retailPos]?.toString() || "0") || 0;
+  //         const margin = retail > 0 ? ((retail - cost) / retail) * 100 : 0;
+  //         const quantityNum = parseInt(quantity.toString()) || 0;
+
+  //         // Create individual products for each unit in the quantity
+  //         for (let k = 0; k < quantityNum; k++) {
+  //           const season = constructSeason();
+  //           const product: Product = {
+  //             id: `${i}-${j}-${k}`,
+  //             selected: false,
+  //             name: `${data[i][styleNamePos]} ${data[i][styleNumberPos]} ${data[i][colorPos]}`,
+  //             style: data[i][styleNumberPos]?.toString() || "",
+  //             color: data[i][colorPos]?.toString() || "",
+  //             size: headers[j]?.toString() || "",
+  //             quantity: 1, // Each product represents 1 unit
+  //             cost,
+  //             retail,
+  //             sku: skus[skuIndex++] || "",
+  //             barcode: barcodes[barcodeIndex++] || "",
+  //             season,
+  //             category: "",
+  //             tags: "",
+  //             preorder: false,
+  //             margin,
+  //             total: cost, // Cost for 1 unit
+  //             shoeSize: "",
+  //             clothingSize: "",
+  //             jeansSize: "",
+  //             metaCategory: "",
+  //           };
+
+  //           // Set initial tags
+  //           product.tags = constructTags(product);
+  //           newProducts.push(product);
+  //         }
+  //       }
+  //     }
+  //   }
+
+  //   console.log(`Processed ${newProducts.length} individual products`);
+  //   setSuccess(`Successfully processed ${newProducts.length} products from Excel file`);
+  //   setProducts(newProducts);
+  // };
+  const parseNumericValue = (value: any): number => {
+    if (typeof value === "number") return value;
+    if (typeof value === "string") {
+      const clean = value.replace(/[^0-9.]/g, ""); // Removes commas, dollar signs, etc.
+      const parsed = parseFloat(clean);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  };
+
   const processExcelData = async (worksheet: ExcelJS.Worksheet) => {
-    // Convert worksheet to array format for easier processing
     const data: any[][] = [];
     worksheet.eachRow((row, rowNumber) => {
       const rowData: any[] = [];
@@ -407,47 +554,45 @@ export default function PurchaseOrderImport() {
       data[rowNumber - 1] = rowData;
     });
 
-    // Find header positions
-    let headersPosition = data.findIndex(
-      (row) => row && row.some((cell) => cell && cell.toString().includes("Style Name"))
+    // 1. Find header row based on "Style Image" in the first cell
+    const headersPosition = data.findIndex(
+      (row) => row && row[0] && row[0].toString().trim() === "Style Image"
     );
 
     if (headersPosition === -1) {
-      setError("Invalid Excel format - Style Name column not found");
+      setError("Invalid Excel format - 'Style Image' row not found");
       return;
     }
 
     const headers = data[headersPosition];
-    const styleNamePos = headers.findIndex((h) => h && h.toString().includes("Style Name"));
-    const styleNumberPos = headers.findIndex((h) => h && h.toString().includes("Style Number"));
-    const colorPos = headers.findIndex((h) => h && h.toString().includes("Color"));
-    const countryOfOriginPos = headers.findIndex(
-      (h) => h && h.toString().includes("Country of Origin")
+    const styleNamePos = headers.findIndex((h) => h?.toString().includes("Style Name"));
+    const styleNumberPos = headers.findIndex((h) => h?.toString().includes("Style Number"));
+    const colorPos = headers.findIndex((h) => h?.toString().includes("Color"));
+    const countryOfOriginPos = headers.findIndex((h) =>
+      h?.toString().includes("Country of Origin")
     );
-    const costPos = headers.findIndex((h) => h && h.toString().includes("WholeSale"));
-    const retailPos = headers.findIndex((h) => h && h.toString().includes("Sugg. Retail"));
+    const costPos = headers.findIndex((h) => h?.toString().includes("WholeSale"));
+    const retailPos = headers.findIndex((h) => h?.toString().includes("Sugg. Retail"));
 
     if (styleNamePos === -1 || styleNumberPos === -1 || colorPos === -1) {
-      setError("Required columns not found in Excel file");
+      setError("Required columns not found: Style Name, Style Number, or Color");
       return;
     }
 
-    // Find the range of size columns - they should be between Country of Origin and Sugg. Retail
     const firstSizePos = countryOfOriginPos + 1;
-    const lastSizePos = retailPos - 1; // Stop before Sugg. Retail column
+    const lastSizePos = retailPos - 1;
 
     if (firstSizePos >= lastSizePos) {
       setError("No size columns found between Country of Origin and Sugg. Retail");
       return;
     }
 
-    console.log(`Processing size columns from ${firstSizePos} to ${lastSizePos}`);
-    console.log("Size columns:", headers.slice(firstSizePos, lastSizePos + 1));
+    console.log(`Detected size columns from index ${firstSizePos} to ${lastSizePos}`);
 
-    // Extract form data from Excel
+    // Pull form data if needed
     updateFormFromExcel(data);
 
-    // Count products for SKU/barcode generation - count total quantity across all sizes
+    // Count total quantity
     let totalQuantity = 0;
     for (let i = headersPosition + 1; i < data.length; i++) {
       if (!data[i] || !data[i][styleNamePos]) break;
@@ -460,18 +605,18 @@ export default function PurchaseOrderImport() {
       }
     }
 
-    console.log(`Total quantity across all products: ${totalQuantity}`);
+    console.log(`Total quantity: ${totalQuantity}`);
 
-    // Get SKUs and barcodes based on total quantity
+    // Fetch SKUs and barcodes
     const token = localStorage.getItem("bridesbyldToken");
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-    const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+    const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
     const [skusResponse, barcodesResponse] = await Promise.all([
-      fetch(`${apiBaseUrl}${basePath}/shopify/getsku/${totalQuantity}`, {
+      fetch(`${apiBaseUrl}${basePath}/getsku/${totalQuantity}`, {
         headers: { Authorization: `Bearer ${token}` },
       }),
-      fetch(`${apiBaseUrl}${basePath}/shopify/barcode/${totalQuantity}`, {
+      fetch(`${apiBaseUrl}${basePath}/barcode/${totalQuantity}`, {
         headers: { Authorization: `Bearer ${token}` },
       }),
     ]);
@@ -479,58 +624,61 @@ export default function PurchaseOrderImport() {
     const skus = await skusResponse.json();
     const barcodes = await barcodesResponse.json();
 
-    // Process products
     const newProducts: Product[] = [];
     let skuIndex = 0;
     let barcodeIndex = 0;
 
     for (let i = headersPosition + 1; i < data.length; i++) {
-      if (!data[i] || !data[i][styleNamePos]) break;
+      const row = data[i];
+      if (!row || !row[styleNamePos]) break;
+
+      const styleName = row[styleNamePos]?.toString().trim() || "";
+      const styleNumber = row[styleNumberPos]?.toString().trim() || "";
+      const color = row[colorPos]?.toString().trim() || "";
+      const cost = parseNumericValue(row[costPos]);
+      const retail = parseNumericValue(row[retailPos]);
+
+      const margin = retail > 0 ? ((retail - cost) / retail) * 100 : 0;
+      const season = constructSeason();
+      const baseName = `${styleName} ${styleNumber} ${color}`.trim();
 
       for (let j = firstSizePos; j <= lastSizePos; j++) {
-        const quantity = data[i][j];
-        if (quantity && quantity !== "0" && quantity !== 0) {
-          const cost = parseFloat(data[i][costPos]?.toString() || "0") || 0;
-          const retail = parseFloat(data[i][retailPos]?.toString() || "0") || 0;
-          const margin = retail > 0 ? ((retail - cost) / retail) * 100 : 0;
-          const quantityNum = parseInt(quantity.toString()) || 0;
+        const size = headers[j]?.toString().trim();
+        const quantityCell = row[j];
+        const quantityNum = parseInt(quantityCell?.toString() || "0");
 
-          // Create individual products for each unit in the quantity
-          for (let k = 0; k < quantityNum; k++) {
-            const season = constructSeason();
-            const product: Product = {
-              id: `${i}-${j}-${k}`,
-              selected: false,
-              name: `${data[i][styleNamePos]} ${data[i][styleNumberPos]} ${data[i][colorPos]}`,
-              style: data[i][styleNumberPos]?.toString() || "",
-              color: data[i][colorPos]?.toString() || "",
-              size: headers[j]?.toString() || "",
-              quantity: 1, // Each product represents 1 unit
-              cost,
-              retail,
-              sku: skus[skuIndex++] || "",
-              barcode: barcodes[barcodeIndex++] || "",
-              season,
-              category: "",
-              tags: "",
-              preorder: false,
-              margin,
-              total: cost, // Cost for 1 unit
-              shoeSize: "",
-              clothingSize: "",
-              jeansSize: "",
-              metaCategory: "",
-            };
+        if (!quantityNum || quantityNum <= 0) continue;
 
-            // Set initial tags
-            product.tags = constructTags(product);
-            newProducts.push(product);
-          }
-        }
+        const product: Product = {
+          id: `${i}-${j}`,
+          selected: false,
+          name: baseName,
+          style: styleNumber,
+          color: color,
+          size: size,
+          quantity: quantityNum,
+          cost,
+          retail,
+          sku: skus[skuIndex++] || "",
+          barcode: barcodes[barcodeIndex++] || "",
+          season,
+          category: "",
+          tags: "",
+          preorder: false,
+          margin,
+          total: cost * quantityNum,
+          shoeSize: "",
+          clothingSize: "",
+          jeansSize: "",
+          metaCategory: "",
+        };
+
+        product.tags = constructTags(product);
+        newProducts.push(product);
       }
     }
 
-    console.log(`Processed ${newProducts.length} individual products`);
+    console.log(`Processed ${newProducts.length} products`);
     setSuccess(`Successfully processed ${newProducts.length} products from Excel file`);
     setProducts(newProducts);
   };
@@ -960,12 +1108,12 @@ export default function PurchaseOrderImport() {
   const validateSchema = async (schema: PurchaseOrderSchema): Promise<boolean> => {
     try {
       const token = localStorage.getItem("bridesbyldToken");
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
       // Check for duplicate orders
       const response = await fetch(
-        `${apiBaseUrl}${basePath}/shopify/checkDuplicateOrder?brand=${encodeURIComponent(
+        `${apiBaseUrl}${basePath}/checkDuplicateOrder?brand=${encodeURIComponent(
           schema.brand
         )}&brandPoNumber=${encodeURIComponent(schema.brandPoNumber)}`,
         {
@@ -1083,11 +1231,11 @@ export default function PurchaseOrderImport() {
 
   const sendPurchaseOrder = async (schema: PurchaseOrderSchema) => {
     const token = localStorage.getItem("bridesbyldToken");
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-    const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+    const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
     try {
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/saveDraftPurchaseorder`, {
+      const response = await fetch(`${apiBaseUrl}${basePath}/saveDraftPurchaseorder`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

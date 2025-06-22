@@ -112,10 +112,10 @@ export default function Vendors() {
         return;
       }
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/vendors`, {
+      const response = await fetch(`${apiBaseUrl}${basePath}/vendors`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -139,10 +139,10 @@ export default function Vendors() {
     try {
       setIsSearching(true);
       const token = localStorage.getItem("bridesbyldToken");
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-      const url = new URL(`${apiBaseUrl}${basePath}/shopify/searchPublishedOrdersForVendors`);
+      const url = new URL(`${apiBaseUrl}${basePath}/searchPublishedOrdersForVendors`);
       url.searchParams.append("brand", brandSearch);
 
       const response = await fetch(url, {
@@ -217,15 +217,15 @@ export default function Vendors() {
     try {
       setIsSavingReminders(true);
       const token = localStorage.getItem("bridesbyldToken");
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
       const remindersToSave = {
         vendor: selectedBrand,
         paymentReminders: [...paymentReminders, ...newReminders],
       };
 
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/savePaymentReminders`, {
+      const response = await fetch(`${apiBaseUrl}${basePath}/savePaymentReminders`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

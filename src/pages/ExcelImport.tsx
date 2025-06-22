@@ -184,12 +184,10 @@ export default function ExcelImport() {
   };
 
   const fetchShopifyItemById = async (id: string) => {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-    const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+    const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-    const response = await fetch(
-      `${apiBaseUrl}${basePath}/shopify/getShopifyItemInfoById?id=${id}`
-    );
+    const response = await fetch(`${apiBaseUrl}${basePath}/getShopifyItemInfoById?id=${id}`);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch item ${id}`);
@@ -199,11 +197,11 @@ export default function ExcelImport() {
   };
 
   const fetchShopifyItemByHandle = async (handle: string) => {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-    const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+    const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
     const response = await fetch(
-      `${apiBaseUrl}${basePath}/shopify/getShopifyItemInfobyHandle?handle=${handle}`
+      `${apiBaseUrl}${basePath}/getShopifyItemInfobyHandle?handle=${handle}`
     );
 
     if (!response.ok) {
@@ -376,19 +374,16 @@ export default function ExcelImport() {
         };
       });
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-      const response = await fetch(
-        `${apiBaseUrl}${basePath}/shopify/itemsWithPriceToFixPrice2Spy`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(adjustmentData),
-        }
-      );
+      const response = await fetch(`${apiBaseUrl}${basePath}/itemsWithPriceToFixPrice2Spy`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(adjustmentData),
+      });
 
       if (!response.ok) {
         throw new Error("Failed to submit price adjustments");

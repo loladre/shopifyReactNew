@@ -59,10 +59,10 @@ export default function ReturnList() {
         return;
       }
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/returnOrdersSummary`, {
+      const response = await fetch(`${apiBaseUrl}${basePath}/returnOrdersSummary`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",

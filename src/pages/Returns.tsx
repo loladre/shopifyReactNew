@@ -81,10 +81,10 @@ export default function Returns() {
         return;
       }
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/admin/loop/report`, {
+      const response = await fetch(`${apiBaseUrl}${basePath}/admin/loop/report`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

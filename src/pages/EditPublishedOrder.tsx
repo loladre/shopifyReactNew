@@ -175,11 +175,11 @@ export default function EditPublishedOrder() {
         return;
       }
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
       const response = await fetch(
-        `${apiBaseUrl}${basePath}/shopify/getPublishedOrderById/${purchaseOrderId}`,
+        `${apiBaseUrl}${basePath}/getPublishedOrderById/${purchaseOrderId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -223,10 +223,10 @@ export default function EditPublishedOrder() {
   const fetchVendors = async () => {
     try {
       const token = localStorage.getItem("bridesbyldToken");
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/vendors`, {
+      const response = await fetch(`${apiBaseUrl}${basePath}/vendors`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -247,10 +247,10 @@ export default function EditPublishedOrder() {
   const fetchProductTypes = async () => {
     try {
       const token = localStorage.getItem("bridesbyldToken");
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/productTypes`, {
+      const response = await fetch(`${apiBaseUrl}${basePath}/productTypes`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -307,6 +307,12 @@ export default function EditPublishedOrder() {
     return `${newSeason}${newYearSeason}`;
   };
 
+  const generatePreorderTag = (startShipDate: string): string => {
+    const formattedDate = formatDateForTags(startShipDate);
+    return `preorder,Message2:282727:Ships by ${formattedDate}`;
+  };
+
+  // Utility: Format date for "Ships by MM/DD/YYYY"
   const formatDateForTags = (dateString: string): string => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -316,113 +322,81 @@ export default function EditPublishedOrder() {
     });
   };
 
-  const generatePreorderTag = (startShipDate: string): string => {
-    const formattedDate = formatDateForTags(startShipDate);
-    return `preorder,Message2:282727:Ships by ${formattedDate}`;
-  };
+  // 1. Update all tags with the new season
+  const updateAllTagsForSeasonChange = (newSeason: string) => {
+    const updated = products.map((product) => {
+      const newTags = product.productTags.includes(",")
+        ? `${newSeason}${product.productTags.substring(product.productTags.indexOf(","))}`
+        : newSeason;
 
-  const updateTagsForSeason = (newSeasonValue: string) => {
-    const updatedProducts = products.map((product) => ({
-      ...product,
-      productVariants: product.productVariants.map((variant) => {
-        let newTags = newSeasonValue;
-        
-        // If preorder is true, add preorder tag
-        if (variant.variantPreOrder) {
-          newTags += `,${generatePreorderTag(newStartShipDate)}`;
-        }
-        
-        return {
-          ...variant,
-          updateVariantFlag: true,
-        };
-      }),
-      productTags: (() => {
-        let newTags = newSeasonValue;
-        
-        // Check if any variant in this product has preorder true
-        const hasPreorder = product.productVariants.some(v => v.variantPreOrder);
-        if (hasPreorder) {
-          newTags += `,${generatePreorderTag(newStartShipDate)}`;
-        }
-        
-        return newTags;
-      })(),
-      updateProductFlag: true,
-    }));
-    
-    setProducts(updatedProducts);
-  };
-
-  const updateTagsForPreorder = (productIndex: number, variantIndex: number, isPreorder: boolean) => {
-    const updatedProducts = [...products];
-    const product = updatedProducts[productIndex];
-    const currentSeason = order?.purchaseOrderSeason || constructSeason();
-    
-    // Update all variants of the same product
-    product.productVariants.forEach((variant, vIndex) => {
-      if (vIndex === variantIndex) {
-        // Update the specific variant
-        variant.variantPreOrder = isPreorder;
-      }
-      
-      let newTags = currentSeason;
-      
-      // Check if this variant should have preorder tag
-      const shouldHavePreorder = vIndex === variantIndex ? isPreorder : variant.variantPreOrder;
-      if (shouldHavePreorder) {
-        newTags += `,${generatePreorderTag(newStartShipDate)}`;
-      }
-      
-      variant.updateVariantFlag = true;
+      return {
+        ...product,
+        productTags: newTags,
+        updateProductFlag: true,
+      };
     });
-    
-    // Update product tags based on whether any variant has preorder
-    const hasAnyPreorder = product.productVariants.some(v => v.variantPreOrder);
-    let productTags = currentSeason;
-    if (hasAnyPreorder) {
-      productTags += `,${generatePreorderTag(newStartShipDate)}`;
-    }
-    
-    product.productTags = productTags;
-    product.updateProductFlag = true;
-    
-    setProducts(updatedProducts);
+
+    setProducts(updated);
   };
 
-  const updateTagsForStartShipDate = (newStartShip: string) => {
-    const updatedProducts = products.map((product) => ({
-      ...product,
-      productVariants: product.productVariants.map((variant) => {
-        const currentSeason = order?.purchaseOrderSeason || constructSeason();
-        let newTags = currentSeason;
-        
-        // If preorder is true, add updated preorder tag with new date
-        if (variant.variantPreOrder) {
-          newTags += `,${generatePreorderTag(newStartShip)}`;
-        }
-        
+  // 2. Preorder changed from Yes ➡ No
+  const removePreorderTags = (productName: string) => {
+    const updated = products.map((product) => {
+      if (product.productName === productName) {
+        const tagBase = product.productTags.split(",")[0];
         return {
-          ...variant,
-          updateVariantFlag: true,
+          ...product,
+          productTags: tagBase,
+          updateProductFlag: true,
         };
-      }),
-      productTags: (() => {
-        const currentSeason = order?.purchaseOrderSeason || constructSeason();
-        let newTags = currentSeason;
-        
-        // Check if any variant in this product has preorder true
-        const hasPreorder = product.productVariants.some(v => v.variantPreOrder);
-        if (hasPreorder) {
-          newTags += `,${generatePreorderTag(newStartShip)}`;
-        }
-        
-        return newTags;
-      })(),
-      updateProductFlag: true,
-    }));
-    
-    setProducts(updatedProducts);
+      }
+      return product;
+    });
+
+    setProducts(updated);
+  };
+
+  // 3. Preorder changed from No ➡ Yes
+  const addPreorderTags = (productName: string, startShipDate: string) => {
+    const tagSuffix = `,preorder,Message2:282727:Ships by ${formatDateForTags(startShipDate)}`;
+
+    const updated = products.map((product) => {
+      if (product.productName === productName) {
+        const alreadyHasPreorder = product.productTags.includes("preorder");
+        const newTags = alreadyHasPreorder ? product.productTags : product.productTags + tagSuffix;
+
+        return {
+          ...product,
+          productTags: newTags,
+          updateProductFlag: true,
+        };
+      }
+      return product;
+    });
+
+    setProducts(updated);
+  };
+
+  // 4. Start ship date changed
+  const updatePreorderDates = (newStartShipDate: string) => {
+    const formatted = formatDateForTags(newStartShipDate);
+    const updated = products.map((product) => {
+      if (product.productTags.includes("preorder")) {
+        const newTags = product.productTags.replace(
+          /Ships by \d{1,2}\/\d{1,2}\/\d{4}/,
+          `Ships by ${formatted}`
+        );
+
+        return {
+          ...product,
+          productTags: newTags,
+          updateProductFlag: true,
+        };
+      }
+      return product;
+    });
+
+    setProducts(updated);
   };
 
   const handleSaveSeason = async () => {
@@ -433,11 +407,11 @@ export default function EditPublishedOrder() {
 
     try {
       const token = localStorage.getItem("bridesbyldToken");
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
       const response = await fetch(
-        `${apiBaseUrl}${basePath}/shopify/updateSeason/${order.purchaseOrderID}`,
+        `${apiBaseUrl}${basePath}/updateSeason/${order.purchaseOrderID}`,
         {
           method: "POST",
           headers: {
@@ -461,7 +435,7 @@ export default function EditPublishedOrder() {
       });
 
       // Update all tags with new season
-      updateTagsForSeason(updatedSeason);
+      updateAllTagsForSeasonChange(updatedSeason);
 
       setIsEditingSeason(false);
       setSuccess("Season updated successfully");
@@ -475,11 +449,11 @@ export default function EditPublishedOrder() {
 
     try {
       const token = localStorage.getItem("bridesbyldToken");
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
       const response = await fetch(
-        `${apiBaseUrl}${basePath}/shopify/updateCancelDate/${order.purchaseOrderID}`,
+        `${apiBaseUrl}${basePath}/updateCancelDate/${order.purchaseOrderID}`,
         {
           method: "POST",
           headers: {
@@ -513,11 +487,11 @@ export default function EditPublishedOrder() {
 
     try {
       const token = localStorage.getItem("bridesbyldToken");
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
       const response = await fetch(
-        `${apiBaseUrl}${basePath}/shopify/updateStartShipDate/${order.purchaseOrderID}`,
+        `${apiBaseUrl}${basePath}/updateStartShipDate/${order.purchaseOrderID}`,
         {
           method: "POST",
           headers: {
@@ -540,7 +514,7 @@ export default function EditPublishedOrder() {
       });
 
       // Update all tags with new start ship date
-      updateTagsForStartShipDate(newStartShipDate);
+      updatePreorderDates(newStartShipDate);
 
       setIsEditingStartShip(false);
       setSuccess("Start ship date updated successfully");
@@ -561,8 +535,8 @@ export default function EditPublishedOrder() {
       });
 
       const token = localStorage.getItem("bridesbyldToken");
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
       const response = await fetch(`${apiBaseUrl}${basePath}/uploadfiles/invoicesAndOrders`, {
         method: "POST",
@@ -641,16 +615,16 @@ export default function EditPublishedOrder() {
       // Update product type and automatically update CAT for all variants
       const newProductType = value;
       const newCategory = selectMapping[newProductType] || "";
-      
+
       updatedProducts[productIndex] = {
         ...updatedProducts[productIndex],
         productType: newProductType,
         updateProductFlag: true,
-        productVariants: updatedProducts[productIndex].productVariants.map(variant => ({
+        productVariants: updatedProducts[productIndex].productVariants.map((variant) => ({
           ...variant,
           variantMetafieldCategory: newCategory,
           updateVariantFlag: true,
-        }))
+        })),
       };
     } else if (field === "productTags" || field === "productCanceled") {
       // These are product-level fields
@@ -660,13 +634,26 @@ export default function EditPublishedOrder() {
         updateProductFlag: true,
       };
     } else if (field === "variantPreOrder") {
-      // Handle preorder change with tag updates
-      updateTagsForPreorder(productIndex, variantIndex, value);
-      return; // Early return since updateTagsForPreorder handles the state update
+      const updatedProducts = [...products];
+      const productName = products[productIndex].productName;
+      const currentProduct = updatedProducts[productIndex];
+      // Update variantPreOrder value
+      currentProduct.productVariants[variantIndex].variantPreOrder = value;
+      currentProduct.productVariants[variantIndex].updateVariantFlag = true;
+
+      if (value === false) {
+        removePreorderTags(productName);
+      } else {
+        addPreorderTags(productName, newStartShipDate);
+      }
+
+      // Mark the product itself for update
+      currentProduct.updateProductFlag = true;
+      return; // Early return
     } else if (field === "variantRetail") {
       // Update retail price for all variants with the same product name
       const currentProductName = updatedProducts[productIndex].productName;
-      
+
       updatedProducts.forEach((product) => {
         if (product.productName === currentProductName) {
           product.productVariants.forEach((variant) => {
@@ -679,11 +666,24 @@ export default function EditPublishedOrder() {
     } else if (field === "variantCost") {
       // Update cost for all variants with the same product name
       const currentProductName = updatedProducts[productIndex].productName;
-      
+
       updatedProducts.forEach((product) => {
         if (product.productName === currentProductName) {
           product.productVariants.forEach((variant) => {
             variant.variantCost = value;
+            variant.updateVariantFlag = true;
+          });
+          product.updateProductFlag = true;
+        }
+      });
+    } else if (field === "variantColor") {
+      // Update color for all variants with the same product name
+      const currentProductName = updatedProducts[productIndex].productName;
+
+      updatedProducts.forEach((product) => {
+        if (product.productName === currentProductName) {
+          product.productVariants.forEach((variant) => {
+            variant.variantColor = value;
             variant.updateVariantFlag = true;
           });
           product.updateProductFlag = true;
@@ -788,8 +788,8 @@ export default function EditPublishedOrder() {
       setError("");
 
       const token = localStorage.getItem("bridesbyldToken");
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
       // Prepare the update payload
       const updatePayload = {
@@ -812,7 +812,7 @@ export default function EditPublishedOrder() {
       };
 
       const response = await fetch(
-        `${apiBaseUrl}${basePath}/shopify/updatePurchaseOrderByIdNoShopify/${order.purchaseOrderID}`,
+        `${apiBaseUrl}${basePath}/updatePurchaseOrderById/${order.purchaseOrderID}`,
         {
           method: "POST",
           headers: {
@@ -1277,7 +1277,19 @@ export default function EditPublishedOrder() {
                             </a>
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-600">
-                            {variant.variantColor}
+                            <Input
+                              type="text"
+                              value={variant.variantColor}
+                              onChange={(e) =>
+                                handleProductChange(
+                                  productIndex,
+                                  variantIndex,
+                                  "variantColor",
+                                  e.target.value
+                                )
+                              }
+                              className="w-24 text-sm"
+                            />
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-600">
                             <Input
@@ -1767,7 +1779,14 @@ export default function EditPublishedOrder() {
               <Card>
                 <div className="space-y-4">
                   <h4 className="text-lg font-semibold text-slate-900">Actions</h4>
-                  <Button onClick={handleSaveOrder} isLoading={isSaving} className="w-full">
+                  <Button
+                    onClick={(e) => {
+                      e.preventDefault(); // Prevent full form submission
+                      handleSaveOrder();
+                    }}
+                    isLoading={isSaving}
+                    className="w-full"
+                  >
                     <Save className="w-4 h-4 mr-2" />
                     Save Order
                   </Button>

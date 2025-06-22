@@ -14,10 +14,10 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       port: 5173,
-      host: '0.0.0.0',
+      host: "0.0.0.0",
       strictPort: false,
       hmr: false, // Disable HMR to prevent WebSocket conflicts
-      allowedHosts: ['hushloladre.com', 'localhost', '127.0.0.1', '.hushloladre.com'],
+      allowedHosts: ["hushloladre.com", "localhost", "127.0.0.1", ".hushloladre.com"],
     },
     optimizeDeps: {
       // Removed lucide-react from exclude to allow pre-bundling
@@ -27,13 +27,13 @@ export default defineConfig(({ mode }) => {
   // Configuration for your development environment
   const devConfig = {
     plugins: [react()],
-    base: "/shopifyreact/",
+    base: "/",
     server: {
       port: 5173,
       strictPort: false,
-      host: '0.0.0.0',
+      host: "0.0.0.0",
       hmr: false, // Disable HMR to prevent conflicts with Socket.IO
-      allowedHosts: ['hushloladre.com', 'localhost', '127.0.0.1', '.hushloladre.com'],
+      allowedHosts: ["hushloladre.com", "localhost", "127.0.0.1", ".hushloladre.com"],
     },
     optimizeDeps: {
       // Removed lucide-react from exclude to allow pre-bundling

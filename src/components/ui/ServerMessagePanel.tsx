@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Wifi, WifiOff, MessageCircle } from 'lucide-react';
-import { io, Socket } from 'socket.io-client';
+import React, { useState, useEffect, useRef } from "react";
+import { Wifi, WifiOff, MessageCircle } from "lucide-react";
+import { io, Socket } from "socket.io-client";
+import { nanoid } from "nanoid";
 
 interface Message {
   id: string;
@@ -13,7 +14,7 @@ interface ServerMessagePanelProps {
   className?: string;
 }
 
-export default function ServerMessagePanel({ className = '' }: ServerMessagePanelProps) {
+export default function ServerMessagePanel({ className = "" }: ServerMessagePanelProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -21,23 +22,23 @@ export default function ServerMessagePanel({ className = '' }: ServerMessagePane
 
   useEffect(() => {
     // Initialize socket connection
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hushloladre.com';
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
     socketRef.current = io(apiBaseUrl);
 
     const socket = socketRef.current;
 
-    socket.on('connect', () => {
+    socket.on("connect", () => {
       setIsConnected(true);
-      addMessage('Connected to Server', false);
+      addMessage("Connected to Server", false);
     });
 
-    socket.on('disconnect', () => {
+    socket.on("disconnect", () => {
       setIsConnected(false);
-      addMessage('Disconnected from Server', true);
+      addMessage("Disconnected from Server", true);
     });
 
-    socket.on('message', (messageContent: string, contentError?: string) => {
-      addMessage(messageContent, contentError === 'error');
+    socket.on("message", (messageContent: string, contentError?: string) => {
+      addMessage(messageContent, contentError === "error");
     });
 
     return () => {
@@ -51,17 +52,17 @@ export default function ServerMessagePanel({ className = '' }: ServerMessagePane
 
   const addMessage = (content: string, isError: boolean) => {
     const newMessage: Message = {
-      id: Date.now().toString(),
+      id: nanoid(),
       content,
       isError,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
-    
-    setMessages(prev => [...prev, newMessage]);
+
+    setMessages((prev) => [...prev, newMessage]);
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   const clearMessages = () => {
@@ -69,7 +70,9 @@ export default function ServerMessagePanel({ className = '' }: ServerMessagePane
   };
 
   return (
-    <div className={`bg-white rounded-xl border border-slate-200 h-full flex flex-col ${className}`}>
+    <div
+      className={`bg-white rounded-xl border border-slate-200 h-full flex flex-col ${className}`}
+    >
       {/* Header */}
       <div className="p-4 border-b border-slate-200 flex items-center justify-between">
         <div className="flex items-center space-x-2">
@@ -101,8 +104,8 @@ export default function ServerMessagePanel({ className = '' }: ServerMessagePane
               key={message.id}
               className={`p-3 rounded-lg text-sm ${
                 message.isError
-                  ? 'bg-red-50 text-red-700 border border-red-200'
-                  : 'bg-slate-50 text-slate-700 border border-slate-200'
+                  ? "bg-red-50 text-red-700 border border-red-200"
+                  : "bg-slate-50 text-slate-700 border border-slate-200"
               }`}
             >
               <div className="flex justify-between items-start">

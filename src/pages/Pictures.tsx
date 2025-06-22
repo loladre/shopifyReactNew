@@ -60,10 +60,10 @@ export default function Pictures() {
         return;
       }
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/getPicturesWithErrors`, {
+      const response = await fetch(`${apiBaseUrl}${basePath}/getPicturesWithErrors`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -100,10 +100,10 @@ export default function Pictures() {
     try {
       setIsDeleting(picture.productId);
       const token = localStorage.getItem("bridesbyldToken");
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/deletePicturesWithErrors`, {
+      const response = await fetch(`${apiBaseUrl}${basePath}/deletePicturesWithErrors`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

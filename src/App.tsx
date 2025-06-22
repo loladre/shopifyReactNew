@@ -27,6 +27,7 @@ import SellThroughImport from "./pages/SellThroughImport";
 import SellThroughData from "./pages/SellThroughData";
 import Pictures from "./pages/Pictures";
 import EditPublishedOrder from "./pages/EditPublishedOrder";
+import ReceiveInventory from "./pages/ReceiveInventory";
 
 interface LoginResponse {
   registered: boolean;
@@ -84,9 +85,9 @@ function LoginPage() {
 
     try {
       // Construct API URL based on environment
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://hushloladre.com";
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH || "";
-      const loginUrl = `${apiBaseUrl}${basePath}/shopify/login`;
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
+      const loginUrl = `${apiBaseUrl}${basePath}/login`;
 
       const response = await fetch(loginUrl, {
         method: "POST",
@@ -352,6 +353,14 @@ function App() {
           element={
             <ProtectedRoute>
               <EditPublishedOrder />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/receive-inventory"
+          element={
+            <ProtectedRoute>
+              <ReceiveInventory />
             </ProtectedRoute>
           }
         />
