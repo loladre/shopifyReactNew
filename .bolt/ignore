@@ -6,3 +6,6 @@ NewReturn.tsx
 PurchaseOrderImport.tsx
 Reorder.tsx
 PublishOrderDetail
+LateOrders.tsx
+NewArrivals.tsx
+ReceiveInventory.tsx
