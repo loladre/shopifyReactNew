@@ -31,3 +31,10 @@ dist-ssr
 .env.production.local
 .env.dev
 
+BulkDiscount.tsx
+BulkDiscountReverse.tsx
+DraftOrdersDetail.tsx
+EditPublishedOrdertsx
+NewReturn.tsx
+PurchaseOrderImport.tsx
+Reorder.tsx
