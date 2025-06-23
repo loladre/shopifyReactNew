@@ -21,11 +21,15 @@ import {
   AlertTriangle,
   ChevronRight,
   ChevronDown,
+  CheckCircle,
 } from "lucide-react";
 
 interface ProductTypeBreakdown {
   productType: string;
   totalCost: number;
+  variantQuantityOrdered: number;
+  variantQuantityReceived: number;
+  receivedValue: number;
   productCount: number;
 }
 
@@ -132,6 +136,24 @@ export default function Seasons() {
       }
 
       const responseData = await response.json();
+      
+      // Protect against empty or invalid data
+      if (!responseData || typeof responseData !== 'object') {
+        setSeasonData(null);
+        setError("No data available for the selected season and brand combination");
+        return;
+      }
+
+      // Ensure brands array exists and has data
+      if (!responseData.brands || !Array.isArray(responseData.brands) || responseData.brands.length === 0) {
+        setSeasonData({
+          ...responseData,
+          brands: []
+        });
+        setError("No brand data available for the selected season");
+        return;
+      }
+
       setSeasonData(responseData);
       setError("");
     } catch (err) {
@@ -168,7 +190,7 @@ export default function Seasons() {
 
   const calculateProgress = (brand: BrandSeasonData): number => {
     return brand.subTotalVariantQuantity > 0
-      ? (brand.subTotalVariantReceivedQuantityProgress / brand.subTotalVariantQuantity) * 100
+      ? (brand.subTotalVariantReceivedQuantity / brand.subTotalVariantQuantity) * 100
       : 0;
   };
 
@@ -178,7 +200,7 @@ export default function Seasons() {
 
   // Create table data including expanded product types
   const createTableData = () => {
-    if (!seasonData) return [];
+    if (!seasonData || !seasonData.brands || seasonData.brands.length === 0) return [];
 
     const tableData: any[] = [];
 
@@ -199,7 +221,7 @@ export default function Seasons() {
       });
 
       // Add product type breakdown rows if expanded
-      if (expandedBrands.has(brand.brand) && brand.productTypeBreakdown) {
+      if (expandedBrands.has(brand.brand) && brand.productTypeBreakdown && brand.productTypeBreakdown.length > 0) {
         brand.productTypeBreakdown.forEach((productType) => {
           tableData.push({
             type: 'productType',
@@ -208,6 +230,9 @@ export default function Seasons() {
             commercialName: getCommercialName(productType.productType),
             totalCost: productType.totalCost,
             productCount: productType.productCount,
+            variantQuantityOrdered: productType.variantQuantityOrdered,
+            variantQuantityReceived: productType.variantQuantityReceived,
+            receivedValue: productType.receivedValue,
           });
         });
       }
@@ -274,13 +299,13 @@ export default function Seasons() {
           return (
             <div className="flex items-center space-x-2">
               <Package className="w-4 h-4 text-slate-400" />
-              <span>{value}</span>
+              <span>{value || 0}</span>
             </div>
           );
         } else {
           return (
             <div className="flex items-center space-x-2 ml-6">
-              <span className="text-slate-600">{row.productCount}</span>
+              <span className="text-slate-600">{row.productCount || 0}</span>
             </div>
           );
         }
@@ -296,11 +321,15 @@ export default function Seasons() {
           return (
             <div className="flex items-center space-x-2">
               <ShoppingCart className="w-4 h-4 text-slate-400" />
-              <span>{value}</span>
+              <span>{value || 0}</span>
             </div>
           );
         } else {
-          return <span className="text-slate-400">-</span>;
+          return (
+            <div className="flex items-center space-x-2 ml-6">
+              <span className="text-slate-600">{row.variantQuantityOrdered || 0}</span>
+            </div>
+          );
         }
       },
       className: "text-center",
@@ -314,13 +343,13 @@ export default function Seasons() {
           return (
             <div className="flex items-center space-x-2">
               <DollarSign className="w-4 h-4 text-slate-400" />
-              <span className="font-semibold">{formatCurrency(value)}</span>
+              <span className="font-semibold">{formatCurrency(value || 0)}</span>
             </div>
           );
         } else {
           return (
             <div className="flex items-center space-x-2 ml-6">
-              <span className="text-slate-600">{formatCurrency(row.totalCost)}</span>
+              <span className="text-slate-600">{formatCurrency(row.totalCost || 0)}</span>
             </div>
           );
         }
@@ -335,12 +364,16 @@ export default function Seasons() {
         if (row.type === 'brand') {
           return (
             <div className="flex items-center space-x-2">
-              <Package className="w-4 h-4 text-green-500" />
-              <span>{value}</span>
+              <CheckCircle className="w-4 h-4 text-green-500" />
+              <span>{value || 0}</span>
             </div>
           );
         } else {
-          return <span className="text-slate-400">-</span>;
+          return (
+            <div className="flex items-center space-x-2 ml-6">
+              <span className="text-slate-600">{row.variantQuantityReceived || 0}</span>
+            </div>
+          );
         }
       },
       className: "text-center",
@@ -354,11 +387,15 @@ export default function Seasons() {
           return (
             <div className="flex items-center space-x-2">
               <DollarSign className="w-4 h-4 text-green-500" />
-              <span className="font-semibold">{formatCurrency(value)}</span>
+              <span className="font-semibold">{formatCurrency(value || 0)}</span>
             </div>
           );
         } else {
-          return <span className="text-slate-400">-</span>;
+          return (
+            <div className="flex items-center space-x-2 ml-6">
+              <span className="text-slate-600">{formatCurrency(row.receivedValue || 0)}</span>
+            </div>
+          );
         }
       },
       className: "text-right",
@@ -368,14 +405,14 @@ export default function Seasons() {
       header: "Progress",
       render: (value, row) => {
         if (row.type === 'brand') {
-          const progress = value;
+          const progress = value || 0;
           return (
             <div className="w-24">
               <div className="flex items-center space-x-2">
                 <div className="flex-1 bg-slate-200 rounded-full h-2">
                   <div
                     className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${progress}%` }}
+                    style={{ width: `${Math.min(progress, 100)}%` }}
                   />
                 </div>
                 <span className="text-xs font-medium text-slate-600 w-8">
@@ -385,7 +422,26 @@ export default function Seasons() {
             </div>
           );
         } else {
-          return <span className="text-slate-400">-</span>;
+          // Calculate progress for product type
+          const ordered = row.variantQuantityOrdered || 0;
+          const received = row.variantQuantityReceived || 0;
+          const progress = ordered > 0 ? (received / ordered) * 100 : 0;
+          
+          return (
+            <div className="w-24 ml-6">
+              <div className="flex items-center space-x-2">
+                <div className="flex-1 bg-slate-200 rounded-full h-2">
+                  <div
+                    className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${Math.min(progress, 100)}%` }}
+                  />
+                </div>
+                <span className="text-xs font-medium text-slate-600 w-8">
+                  {Math.round(progress)}%
+                </span>
+              </div>
+            </div>
+          );
         }
       },
     },
@@ -407,10 +463,8 @@ export default function Seasons() {
     return { value: year.toString(), label: year.toString() };
   });
 
-  const overallProgress = seasonData
-    ? seasonData.grandTotalVariantQuantity > 0
-      ? (seasonData.grandTotalVariantReceivedQuantityProgress / seasonData.grandTotalVariantQuantity) * 100
-      : 0
+  const overallProgress = seasonData && seasonData.grandTotalVariantQuantity > 0
+    ? (seasonData.grandTotalVariantReceivedQuantity / seasonData.grandTotalVariantQuantity) * 100
     : 0;
 
   if (error && !seasonData) {
@@ -513,25 +567,25 @@ export default function Seasons() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <StatusCard
                     title="Total Ordered QTY"
-                    value={seasonData.grandTotalVariantQuantity.toLocaleString()}
+                    value={(seasonData.grandTotalVariantQuantity || 0).toLocaleString()}
                     icon={ShoppingCart}
                     color="blue"
                   />
                   <StatusCard
                     title="Total Received QTY"
-                    value={seasonData.grandTotalVariantReceivedQuantity.toLocaleString()}
+                    value={(seasonData.grandTotalVariantReceivedQuantity || 0).toLocaleString()}
                     icon={Package}
                     color="green"
                   />
                   <StatusCard
                     title="Total Ordered Value"
-                    value={formatCurrency(seasonData.grandTotalTotalItemsCost)}
+                    value={formatCurrency(seasonData.grandTotalTotalItemsCost || 0)}
                     icon={DollarSign}
                     color="purple"
                   />
                   <StatusCard
                     title="Balance Due"
-                    value={formatCurrency(seasonData.grandTotalBalanceDue)}
+                    value={formatCurrency(seasonData.grandTotalBalanceDue || 0)}
                     icon={TrendingUp}
                     color="orange"
                   />
@@ -546,7 +600,7 @@ export default function Seasons() {
                         <div className="flex justify-between items-center">
                           <span className="text-slate-600">Total Received Value:</span>
                           <span className="font-semibold text-green-600">
-                            {formatCurrency(seasonData.grandTotalReceivedValue)}
+                            {formatCurrency(seasonData.grandTotalReceivedValue || 0)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
@@ -566,15 +620,15 @@ export default function Seasons() {
                         <div className="flex justify-between text-sm">
                           <span>
                             Received:{" "}
-                            {seasonData.grandTotalVariantReceivedQuantity.toLocaleString()}/
-                            {seasonData.grandTotalVariantQuantity.toLocaleString()}
+                            {(seasonData.grandTotalVariantReceivedQuantity || 0).toLocaleString()}/
+                            {(seasonData.grandTotalVariantQuantity || 0).toLocaleString()}
                           </span>
                           <span>{Math.round(overallProgress)}%</span>
                         </div>
                         <div className="w-full bg-slate-200 rounded-full h-3">
                           <div
                             className="bg-blue-500 h-3 rounded-full transition-all duration-300"
-                            style={{ width: `${overallProgress}%` }}
+                            style={{ width: `${Math.min(overallProgress, 100)}%` }}
                           />
                         </div>
                       </div>
@@ -583,25 +637,35 @@ export default function Seasons() {
                 </div>
 
                 {/* Brand Breakdown Table */}
-                <Card padding="none">
-                  <div className="p-6 border-b border-slate-200">
-                    <h3 className="text-lg font-semibold text-slate-900">Brand Breakdown</h3>
-                    <p className="text-sm text-slate-600 mt-1">
-                      Click on the + icon to expand product type details
+                {seasonData.brands && seasonData.brands.length > 0 ? (
+                  <Card padding="none">
+                    <div className="p-6 border-b border-slate-200">
+                      <h3 className="text-lg font-semibold text-slate-900">Brand Breakdown</h3>
+                      <p className="text-sm text-slate-600 mt-1">
+                        Click on the + icon to expand product type details
+                      </p>
+                    </div>
+                    <DataTable
+                      columns={columns}
+                      data={createTableData()}
+                      onRowClick={handleRowClick}
+                      emptyMessage="No brand data available for this season"
+                    />
+                  </Card>
+                ) : (
+                  <Card className="text-center py-12">
+                    <AlertTriangle className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-slate-900 mb-2">No Brand Data Found</h3>
+                    <p className="text-slate-600 mb-6">
+                      No brand data is available for the selected season and brand combination.
                     </p>
-                  </div>
-                  <DataTable
-                    columns={columns}
-                    data={createTableData()}
-                    onRowClick={handleRowClick}
-                    emptyMessage="No brand data available for this season"
-                  />
-                </Card>
+                  </Card>
+                )}
               </>
             )}
 
             {/* Empty State */}
-            {!seasonData && !isSearching && (
+            {!seasonData && !isSearching && !error && (
               <Card className="text-center py-12">
                 <BarChart3 className="w-16 h-16 text-slate-400 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-slate-900 mb-2">
@@ -631,6 +695,16 @@ export default function Seasons() {
                 <p className="text-slate-600">
                   Please wait while we fetch the seasonal information...
                 </p>
+              </Card>
+            )}
+
+            {/* No Data Warning */}
+            {error && seasonData && (
+              <Card className="border-yellow-200 bg-yellow-50">
+                <div className="flex items-center space-x-2 text-yellow-700">
+                  <AlertTriangle className="w-5 h-5" />
+                  <span>{error}</span>
+                </div>
               </Card>
             )}
           </div>
