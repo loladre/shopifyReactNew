@@ -7,6 +7,7 @@ import FormField from "../components/ui/FormField";
 import DataTable, { Column } from "../components/ui/DataTable";
 import StatusCard from "../components/ui/StatusCard";
 import ServerMessagePanel from "../components/ui/ServerMessagePanel";
+import { selectMapping } from "../utils/sizeConversions";
 import {
   Leaf,
   Search,
@@ -18,20 +19,31 @@ import {
   Calendar,
   BarChart3,
   AlertTriangle,
+  ChevronRight,
+  ChevronDown,
 } from "lucide-react";
+
+interface ProductTypeBreakdown {
+  productType: string;
+  totalCost: number;
+  productCount: number;
+}
 
 interface BrandSeasonData {
   brand: string;
-  subTotalProductQuantity: number;
   subTotalVariantQuantity: number;
-  subTotalTotalItemsCost: number;
+  subTotalProductQuantity: number;
   subTotalVariantReceivedQuantity: number;
+  subTotalTotalItemsCost: number;
   subTotaltotalReceivedValue: number;
+  subTotaltotalBalanceDue: number;
   subTotalVariantReceivedQuantityProgress: number;
+  productTypeBreakdown: ProductTypeBreakdown[];
 }
 
 interface SeasonData {
   grandTotalVariantQuantity: number;
+  grandTotalProductQuantity: number;
   grandTotalVariantReceivedQuantity: number;
   grandTotalTotalItemsCost: number;
   grandTotalReceivedValue: number;
@@ -43,10 +55,11 @@ interface SeasonData {
 export default function Seasons() {
   const [vendors, setVendors] = useState<string[]>([]);
   const [selectedSeason, setSelectedSeason] = useState<string>("Resort");
-  const [selectedBrand, setSelectedBrand] = useState<string>("");
+  const [selectedBrand, setSelectedBrand] = useState<string>("ALL");
   const [selectedYear, setSelectedYear] = useState<string>("26");
   const [seasonData, setSeasonData] = useState<SeasonData | null>(null);
   const [generatedSeason, setGeneratedSeason] = useState<string>("");
+  const [expandedBrands, setExpandedBrands] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string>("");
@@ -69,7 +82,7 @@ export default function Seasons() {
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
       const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-      const response = await fetch(`${apiBaseUrl}${basePath}/vendors`, {
+      const response = await fetch(`${apiBaseUrl}${basePath}/shopify/vendors`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -90,12 +103,7 @@ export default function Seasons() {
   };
 
   const handleSearch = async () => {
-    if (!selectedBrand) {
-      setError("Please select a brand");
-      return;
-    }
-
-    const combinedSeason = selectedSeason + selectedBrand + selectedYear;
+    const combinedSeason = selectedSeason + selectedYear;
     setGeneratedSeason(combinedSeason);
 
     try {
@@ -104,7 +112,15 @@ export default function Seasons() {
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
       const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-      const response = await fetch(`${apiBaseUrl}${basePath}/getSeasonData/${combinedSeason}`, {
+      // Construct URL based on whether brand is "ALL" or specific brand
+      let url;
+      if (selectedBrand === "ALL") {
+        url = `${apiBaseUrl}${basePath}/getSeasonData/${combinedSeason}`;
+      } else {
+        url = `${apiBaseUrl}${basePath}/getSeasonData/${combinedSeason}/${selectedBrand}`;
+      }
+
+      const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -115,13 +131,9 @@ export default function Seasons() {
         throw new Error("Failed to fetch season data");
       }
 
-      const responseJson = await response.json();
-      if (responseJson && responseJson.length > 0) {
-        setSeasonData(responseJson[0]);
-      } else {
-        setSeasonData(null);
-        setError("No data found for this season");
-      }
+      const responseData = await response.json();
+      setSeasonData(responseData);
+      setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed");
       setSeasonData(null);
@@ -130,8 +142,20 @@ export default function Seasons() {
     }
   };
 
-  const handleRowClick = (brand: BrandSeasonData) => {
-    navigate(`/vendors?brand=${encodeURIComponent(brand.brand)}`);
+  const toggleBrandExpansion = (brandName: string) => {
+    const newExpanded = new Set(expandedBrands);
+    if (newExpanded.has(brandName)) {
+      newExpanded.delete(brandName);
+    } else {
+      newExpanded.add(brandName);
+    }
+    setExpandedBrands(newExpanded);
+  };
+
+  const handleRowClick = (row: any) => {
+    if (row.type === 'brand') {
+      navigate(`/vendors?brand=${encodeURIComponent(row.brand)}`);
+    }
   };
 
   const formatCurrency = (amount: number): string => {
@@ -148,98 +172,221 @@ export default function Seasons() {
       : 0;
   };
 
+  const getCommercialName = (productType: string): string => {
+    return selectMapping[productType] || productType;
+  };
+
+  // Create table data including expanded product types
+  const createTableData = () => {
+    if (!seasonData) return [];
+
+    const tableData: any[] = [];
+
+    seasonData.brands.forEach((brand) => {
+      // Add main brand row
+      tableData.push({
+        type: 'brand',
+        brand: brand.brand,
+        subTotalProductQuantity: brand.subTotalProductQuantity,
+        subTotalVariantQuantity: brand.subTotalVariantQuantity,
+        subTotalTotalItemsCost: brand.subTotalTotalItemsCost,
+        subTotalVariantReceivedQuantity: brand.subTotalVariantReceivedQuantity,
+        subTotaltotalReceivedValue: brand.subTotaltotalReceivedValue,
+        subTotalVariantReceivedQuantityProgress: brand.subTotalVariantReceivedQuantityProgress,
+        progress: calculateProgress(brand),
+        isExpanded: expandedBrands.has(brand.brand),
+        hasBreakdown: brand.productTypeBreakdown && brand.productTypeBreakdown.length > 0,
+      });
+
+      // Add product type breakdown rows if expanded
+      if (expandedBrands.has(brand.brand) && brand.productTypeBreakdown) {
+        brand.productTypeBreakdown.forEach((productType) => {
+          tableData.push({
+            type: 'productType',
+            brand: brand.brand,
+            productType: productType.productType,
+            commercialName: getCommercialName(productType.productType),
+            totalCost: productType.totalCost,
+            productCount: productType.productCount,
+          });
+        });
+      }
+    });
+
+    return tableData;
+  };
+
   const columns: Column[] = [
     {
+      key: "expand",
+      header: "",
+      render: (_, row) => {
+        if (row.type === 'brand' && row.hasBreakdown) {
+          return (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleBrandExpansion(row.brand);
+              }}
+              className="p-1 hover:bg-slate-100 rounded transition-colors duration-200"
+            >
+              {row.isExpanded ? (
+                <ChevronDown className="w-4 h-4 text-slate-600" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-slate-600" />
+              )}
+            </button>
+          );
+        }
+        return null;
+      },
+      className: "w-8",
+    },
+    {
       key: "brand",
-      header: "Brand",
+      header: "Brand / Product Type",
       sortable: true,
-      render: (value) => (
-        <div className="flex items-center space-x-2">
-          <Building2 className="w-4 h-4 text-slate-400" />
-          <span className="font-medium">{value}</span>
-        </div>
-      ),
+      render: (value, row) => {
+        if (row.type === 'brand') {
+          return (
+            <div className="flex items-center space-x-2">
+              <Building2 className="w-4 h-4 text-slate-400" />
+              <span className="font-medium">{value}</span>
+            </div>
+          );
+        } else {
+          return (
+            <div className="flex items-center space-x-2 ml-6">
+              <Package className="w-4 h-4 text-slate-400" />
+              <span className="text-slate-600">{row.commercialName}</span>
+              <span className="text-xs text-slate-400">({row.productType})</span>
+            </div>
+          );
+        }
+      },
     },
     {
       key: "subTotalProductQuantity",
       header: "QTY Product Ordered",
       sortable: true,
-      render: (value) => (
-        <div className="flex items-center space-x-2">
-          <Package className="w-4 h-4 text-slate-400" />
-          <span>{value}</span>
-        </div>
-      ),
+      render: (value, row) => {
+        if (row.type === 'brand') {
+          return (
+            <div className="flex items-center space-x-2">
+              <Package className="w-4 h-4 text-slate-400" />
+              <span>{value}</span>
+            </div>
+          );
+        } else {
+          return (
+            <div className="flex items-center space-x-2 ml-6">
+              <span className="text-slate-600">{row.productCount}</span>
+            </div>
+          );
+        }
+      },
       className: "text-center",
     },
     {
       key: "subTotalVariantQuantity",
       header: "Qty Variant Ordered",
       sortable: true,
-      render: (value) => (
-        <div className="flex items-center space-x-2">
-          <ShoppingCart className="w-4 h-4 text-slate-400" />
-          <span>{value}</span>
-        </div>
-      ),
+      render: (value, row) => {
+        if (row.type === 'brand') {
+          return (
+            <div className="flex items-center space-x-2">
+              <ShoppingCart className="w-4 h-4 text-slate-400" />
+              <span>{value}</span>
+            </div>
+          );
+        } else {
+          return <span className="text-slate-400">-</span>;
+        }
+      },
       className: "text-center",
     },
     {
       key: "subTotalTotalItemsCost",
       header: "Ordered Value",
       sortable: true,
-      render: (value) => (
-        <div className="flex items-center space-x-2">
-          <DollarSign className="w-4 h-4 text-slate-400" />
-          <span className="font-semibold">{formatCurrency(value)}</span>
-        </div>
-      ),
+      render: (value, row) => {
+        if (row.type === 'brand') {
+          return (
+            <div className="flex items-center space-x-2">
+              <DollarSign className="w-4 h-4 text-slate-400" />
+              <span className="font-semibold">{formatCurrency(value)}</span>
+            </div>
+          );
+        } else {
+          return (
+            <div className="flex items-center space-x-2 ml-6">
+              <span className="text-slate-600">{formatCurrency(row.totalCost)}</span>
+            </div>
+          );
+        }
+      },
       className: "text-right",
     },
     {
       key: "subTotalVariantReceivedQuantity",
       header: "QTY Variant Received",
       sortable: true,
-      render: (value) => (
-        <div className="flex items-center space-x-2">
-          <Package className="w-4 h-4 text-green-500" />
-          <span>{value}</span>
-        </div>
-      ),
+      render: (value, row) => {
+        if (row.type === 'brand') {
+          return (
+            <div className="flex items-center space-x-2">
+              <Package className="w-4 h-4 text-green-500" />
+              <span>{value}</span>
+            </div>
+          );
+        } else {
+          return <span className="text-slate-400">-</span>;
+        }
+      },
       className: "text-center",
     },
     {
       key: "subTotaltotalReceivedValue",
       header: "Received Value",
       sortable: true,
-      render: (value) => (
-        <div className="flex items-center space-x-2">
-          <DollarSign className="w-4 h-4 text-green-500" />
-          <span className="font-semibold">{formatCurrency(value)}</span>
-        </div>
-      ),
+      render: (value, row) => {
+        if (row.type === 'brand') {
+          return (
+            <div className="flex items-center space-x-2">
+              <DollarSign className="w-4 h-4 text-green-500" />
+              <span className="font-semibold">{formatCurrency(value)}</span>
+            </div>
+          );
+        } else {
+          return <span className="text-slate-400">-</span>;
+        }
+      },
       className: "text-right",
     },
     {
       key: "progress",
       header: "Progress",
-      render: (_, brand) => {
-        const progress = calculateProgress(brand);
-        return (
-          <div className="w-24">
-            <div className="flex items-center space-x-2">
-              <div className="flex-1 bg-slate-200 rounded-full h-2">
-                <div
-                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
+      render: (value, row) => {
+        if (row.type === 'brand') {
+          const progress = value;
+          return (
+            <div className="w-24">
+              <div className="flex items-center space-x-2">
+                <div className="flex-1 bg-slate-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <span className="text-xs font-medium text-slate-600 w-8">
+                  {Math.round(progress)}%
+                </span>
               </div>
-              <span className="text-xs font-medium text-slate-600 w-8">
-                {Math.round(progress)}%
-              </span>
             </div>
-          </div>
-        );
+          );
+        } else {
+          return <span className="text-slate-400">-</span>;
+        }
       },
     },
   ];
@@ -262,9 +409,7 @@ export default function Seasons() {
 
   const overallProgress = seasonData
     ? seasonData.grandTotalVariantQuantity > 0
-      ? (seasonData.grandTotalVariantReceivedQuantityProgress /
-          seasonData.grandTotalVariantQuantity) *
-        100
+      ? (seasonData.grandTotalVariantReceivedQuantityProgress / seasonData.grandTotalVariantQuantity) * 100
       : 0
     : 0;
 
@@ -326,7 +471,7 @@ export default function Seasons() {
                       onChange={(e) => setSelectedBrand(e.target.value)}
                       className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                     >
-                      <option value="">Select a Vendor Name</option>
+                      <option value="ALL">ALL</option>
                       {vendors.map((vendor) => (
                         <option key={vendor} value={vendor}>
                           {vendor}
@@ -351,7 +496,6 @@ export default function Seasons() {
                     <Button
                       onClick={handleSearch}
                       isLoading={isSearching}
-                      disabled={!selectedBrand}
                       className="w-full"
                     >
                       <Search className="w-4 h-4 mr-2" />
@@ -442,10 +586,13 @@ export default function Seasons() {
                 <Card padding="none">
                   <div className="p-6 border-b border-slate-200">
                     <h3 className="text-lg font-semibold text-slate-900">Brand Breakdown</h3>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Click on the + icon to expand product type details
+                    </p>
                   </div>
                   <DataTable
                     columns={columns}
-                    data={seasonData.brands}
+                    data={createTableData()}
                     onRowClick={handleRowClick}
                     emptyMessage="No brand data available for this season"
                   />
@@ -470,6 +617,7 @@ export default function Seasons() {
                     <li>• Track receiving progress by brand</li>
                     <li>• Analyze brand performance within seasons</li>
                     <li>• Monitor outstanding balances</li>
+                    <li>• Explore product type breakdowns</li>
                   </ul>
                 </div>
               </Card>
