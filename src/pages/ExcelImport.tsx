@@ -27,6 +27,7 @@ import {
   BarChart3,
   Download,
   RefreshCw,
+  ExternalLink,
 } from "lucide-react";
 
 interface ExcelRowData {
@@ -63,7 +64,13 @@ interface EnrichedPriceAdjustmentItem {
     id: string;
     price: string;
     compareAtPrice: string;
+    inventoryItem?: {
+      unitCost?: {
+        amount: string;
+      };
+    };
     product: {
+      id: string;
       title: string;
       handle: string;
       tags: string[];
@@ -155,12 +162,12 @@ export default function ExcelImport() {
         if (rowNumber === 1) return; // Skip header
 
         const values = row.values as any[];
-        const percentDiff = values[3];
 
         // Filter out rows with 0% difference
+        const percentDiff = values[3];
         if (percentDiff === "0%" || percentDiff === 0) return;
 
-        // Extract competitor link from cell E (column 5)
+        // Extract competitor link from cell E (column 5) - this is column D in 0-based indexing
         const competitorCell = worksheet.getCell(`E${rowNumber}`);
         let competitorLink: string | undefined;
         
@@ -170,15 +177,18 @@ export default function ExcelImport() {
           competitorLink = (competitorCell.value as any).hyperlink;
         }
 
+        // Extract competitor price from column E (index 4 in values array)
+        const competitorPrice = parseFloat(String(values[5]).replace(/[,$]/g, "")) || 0;
+
         excelData.push({
           item: String(values[1] || "").split(" - ")[0].trim(),
           price: parseFloat(String(values[2]).replace(/[,$]/g, "")) || 0,
           percentDiff: String(percentDiff),
-          competitorPrice: parseFloat(String(values[4]).replace(/[,$]/g, "")) || 0,
-          competitorName: String(values[5] || ""),
+          competitorPrice: competitorPrice,
+          competitorName: String(values[5] || ""), // Column E contains competitor name
           competitorLink,
           barcode: String(values[8] || ""), // Column H (index 7) contains the barcode
-          brand: String(values[10] || ""),
+          brand: String(values[10] || ""), // Column J (index 9) contains the brand
         });
       });
 
@@ -222,7 +232,7 @@ export default function ExcelImport() {
         .filter(item => item !== null) as EnrichedPriceAdjustmentItem[];
 
       setItems(processedItems);
-      setSuccess(`Successfully processed ${processedItems.length} items from Excel file`);
+      setSuccess(`Successfully processed ${processedItems.length} items`);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to process batch data");
@@ -266,12 +276,29 @@ export default function ExcelImport() {
     }
 
     const onSale = salePrice !== price;
-    const cost = parseFloat(shopifyData.product.variants?.[0]?.inventoryItem?.unitCost?.amount || "0");
+    
+    // Extract cost from enriched data
+    const cost = parseFloat(
+      shopifyData.inventoryItem?.unitCost?.amount || 
+      shopifyData.product.variants?.[0]?.inventoryItem?.unitCost?.amount || 
+      "0"
+    );
+
+    // Format percentage difference properly
+    let formattedPercentDiff = enrichedItem.percentDiff;
+    if (typeof formattedPercentDiff === 'number') {
+      formattedPercentDiff = `${Math.round(formattedPercentDiff * 100)}%`;
+    } else if (typeof formattedPercentDiff === 'string' && !formattedPercentDiff.includes('%')) {
+      const numValue = parseFloat(formattedPercentDiff);
+      if (!isNaN(numValue)) {
+        formattedPercentDiff = `${Math.round(numValue * 100)}%`;
+      }
+    }
 
     return {
       id: shopifyData.id,
-      itemName: shopifyData.product.title,
-      brand: enrichedItem.brand,
+      itemName: enrichedItem.item || shopifyData.product.title, // Use item from Excel first, fallback to Shopify title
+      brand: enrichedItem.brand, // Use brand from Excel
       receivedDate: shopifyData.product.metafield?.value || "",
       onSale,
       price,
@@ -285,7 +312,7 @@ export default function ExcelImport() {
       competitorPrice,
       competitorName: enrichedItem.competitorName,
       competitorLink: enrichedItem.competitorLink,
-      percentDiff: enrichedItem.percentDiff,
+      percentDiff: formattedPercentDiff,
       selected: false,
       shopify: shopifyData,
     };
@@ -476,9 +503,12 @@ export default function ExcelImport() {
           href={`https://loladre.com/products/${item.handle}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-purple-600 hover:text-purple-800 font-medium"
+          className="text-purple-600 hover:text-purple-800 font-medium flex items-center space-x-1"
         >
-          {value}
+          <span className="max-w-xs truncate" title={value}>
+            {value}
+          </span>
+          <ExternalLink className="w-3 h-3 flex-shrink-0" />
         </a>
       ),
     },
@@ -511,7 +541,7 @@ export default function ExcelImport() {
               className="text-blue-600 hover:text-blue-800 flex items-center space-x-1"
             >
               <span>{value}</span>
-              <Eye className="w-3 h-3" />
+              <ExternalLink className="w-3 h-3" />
             </a>
           );
         }
@@ -728,7 +758,7 @@ export default function ExcelImport() {
                     </FormField>
                     <div className="text-sm text-slate-600">
                       <p>
-                        Expected Excel format: Item, Price, % Diff, Competitor Price, Competitor Name (with link), ..., Barcode (Column H), ..., Brand
+                        Expected Excel format: Item, Price, % Diff, Competitor Price, Competitor Name (with link), ..., Barcode (Column H), ..., Brand (Column J)
                       </p>
                       <p>Rows with 0% difference will be automatically filtered out.</p>
                       <p>Competitor links will be automatically extracted from Excel hyperlinks.</p>
@@ -901,6 +931,7 @@ export default function ExcelImport() {
                       <li>• Items with less than 1.5% price difference are excluded</li>
                       <li>• Bulk processing of multiple products at once</li>
                       <li>• <strong>Column H must contain product barcodes</strong></li>
+                      <li>• <strong>Column J must contain brand names</strong></li>
                     </ul>
                   </div>
                   <div>
