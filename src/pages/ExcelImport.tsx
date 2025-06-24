@@ -29,7 +29,18 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-interface PriceAdjustmentItem {
+interface ExcelRowData {
+  item: string;
+  price: number;
+  percentDiff: string;
+  competitorPrice: number;
+  competitorName: string;
+  competitorLink?: string;
+  id: string;
+  brand: string;
+}
+
+interface EnrichedPriceAdjustmentItem {
   id: string;
   itemName: string;
   brand: string;
@@ -43,20 +54,23 @@ interface PriceAdjustmentItem {
   adjustMainPrice: boolean;
   tags: string;
   handle: string;
-  competitorPrice?: number;
-  competitorName?: string;
-  percentDiff?: string;
-  selected: boolean;
-}
-
-interface ExcelRowData {
-  item: string;
-  price: number;
-  percentDiff: string;
   competitorPrice: number;
   competitorName: string;
-  id: string;
-  brand: string;
+  competitorLink?: string;
+  percentDiff: string;
+  selected: boolean;
+  shopify: {
+    id: string;
+    price: string;
+    compareAtPrice: string;
+    product: {
+      title: string;
+      handle: string;
+      tags: string[];
+      metafield?: { value: string };
+      variants: any[];
+    };
+  };
 }
 
 export default function ExcelImport() {
@@ -65,8 +79,8 @@ export default function ExcelImport() {
   const handleInputRef = useRef<HTMLInputElement>(null);
 
   // State
-  const [items, setItems] = useState<PriceAdjustmentItem[]>([]);
-  const [filteredItems, setFilteredItems] = useState<PriceAdjustmentItem[]>([]);
+  const [items, setItems] = useState<EnrichedPriceAdjustmentItem[]>([]);
+  const [filteredItems, setFilteredItems] = useState<EnrichedPriceAdjustmentItem[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [handleSearch, setHandleSearch] = useState<string>("");
   const [filterBy, setFilterBy] = useState<string>("All");
@@ -136,7 +150,7 @@ export default function ExcelImport() {
 
       const excelData: ExcelRowData[] = [];
 
-      // Skip header row and process data
+      // Process all rows and extract data including hyperlinks
       worksheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return; // Skip header
 
@@ -146,36 +160,35 @@ export default function ExcelImport() {
         // Filter out rows with 0% difference
         if (percentDiff === "0%" || percentDiff === 0) return;
 
+        // Extract competitor link from cell E (column 5)
+        const competitorCell = worksheet.getCell(`E${rowNumber}`);
+        let competitorLink: string | undefined;
+        
+        if (competitorCell.hyperlink) {
+          competitorLink = competitorCell.hyperlink;
+        } else if (competitorCell.value && typeof competitorCell.value === 'object' && 'hyperlink' in competitorCell.value) {
+          competitorLink = (competitorCell.value as any).hyperlink;
+        }
+
         excelData.push({
-          item: values[1] || "",
+          item: String(values[1] || "").split(" - ")[0].trim(),
           price: parseFloat(String(values[2]).replace(/[,$]/g, "")) || 0,
           percentDiff: String(percentDiff),
           competitorPrice: parseFloat(String(values[4]).replace(/[,$]/g, "")) || 0,
-          competitorName: values[5] || "",
-          id: values[8] || "",
-          brand: values[10] || "",
+          competitorName: String(values[5] || ""),
+          competitorLink,
+          id: String(values[8] || ""),
+          brand: String(values[10] || ""),
         });
       });
 
-      // Process each item from Excel
-      const processedItems: PriceAdjustmentItem[] = [];
-
-      for (const excelItem of excelData) {
-        try {
-          const shopifyData = await fetchShopifyItemById(excelItem.id);
-          if (shopifyData) {
-            const processedItem = combineExcelAndShopifyData(excelItem, shopifyData);
-            if (processedItem) {
-              processedItems.push(processedItem);
-            }
-          }
-        } catch (err) {
-          console.warn(`Failed to process item ${excelItem.id}:`, err);
-        }
+      if (excelData.length === 0) {
+        throw new Error("No valid data found in the Excel file");
       }
 
-      setItems(processedItems);
-      setSuccess(`Successfully processed ${processedItems.length} items from Excel file`);
+      // Send all data to backend for processing
+      await processBatchData(excelData);
+
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to process Excel file");
     } finally {
@@ -183,51 +196,53 @@ export default function ExcelImport() {
     }
   };
 
-  const fetchShopifyItemById = async (id: string) => {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-    const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
+  const processBatchData = async (excelData: ExcelRowData[]) => {
+    try {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
 
-    const response = await fetch(`${apiBaseUrl}${basePath}/getShopifyItemInfoById?id=${id}`);
+      const response = await fetch(`${apiBaseUrl}${basePath}/processPriceMonitorSheet`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(excelData),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch item ${id}`);
+      if (!response.ok) {
+        throw new Error("Failed to process data with backend");
+      }
+
+      const enrichedData: any[] = await response.json();
+      
+      // Process the enriched data locally
+      const processedItems = enrichedData
+        .filter(item => item.shopify && item.shopify.product) // Only items with valid Shopify data
+        .map(item => processEnrichedItem(item))
+        .filter(item => item !== null) as EnrichedPriceAdjustmentItem[];
+
+      setItems(processedItems);
+      setSuccess(`Successfully processed ${processedItems.length} items from Excel file`);
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to process batch data");
     }
-
-    return await response.json();
   };
 
-  const fetchShopifyItemByHandle = async (handle: string) => {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-    const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
-
-    const response = await fetch(
-      `${apiBaseUrl}${basePath}/getShopifyItemInfobyHandle?handle=${handle}`
-    );
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch item with handle ${handle}`);
-    }
-
-    return await response.json();
-  };
-
-  const combineExcelAndShopifyData = (
-    excelData: ExcelRowData,
-    shopifyData: any
-  ): PriceAdjustmentItem | null => {
-    const combinedData = shopifyData.data?.productByHandle || shopifyData;
-
-    if (!combinedData) return null;
+  const processEnrichedItem = (enrichedItem: any): EnrichedPriceAdjustmentItem | null => {
+    const shopifyData = enrichedItem.shopify;
+    
+    if (!shopifyData || !shopifyData.product) return null;
 
     // Skip if competitor price is missing or invalid
-    if (combinedData.competitorPrice === " - " || combinedData.competitorPrice === null) {
+    if (enrichedItem.competitorPrice === null || enrichedItem.competitorPrice === undefined) {
       return null;
     }
 
     // Calculate price and sale price
     let price: number, salePrice: number;
-    const compareAtPrice = parseFloat(combinedData.variants?.nodes?.[0]?.compareAtPrice || 0);
-    const currentPrice = parseFloat(combinedData.variants?.nodes?.[0]?.price || 0);
+    const compareAtPrice = parseFloat(shopifyData.compareAtPrice || "0");
+    const currentPrice = parseFloat(shopifyData.price || "0");
 
     if (compareAtPrice === 0 || compareAtPrice === null) {
       price = currentPrice;
@@ -237,9 +252,7 @@ export default function ExcelImport() {
       salePrice = currentPrice;
     }
 
-    const competitorPrice = parseFloat(
-      combinedData.competitorPrice || excelData.competitorPrice || 0
-    );
+    const competitorPrice = parseFloat(enrichedItem.competitorPrice || "0");
 
     // Filter logic - skip items with small price differences
     const priceDiffPercentage = ((price - competitorPrice) / price) * 100;
@@ -253,28 +266,28 @@ export default function ExcelImport() {
     }
 
     const onSale = salePrice !== price;
-    const cost = parseFloat(
-      combinedData.variants?.nodes?.[0]?.inventoryItem?.unitCost?.amount || 0
-    );
+    const cost = parseFloat(shopifyData.product.variants?.[0]?.inventoryItem?.unitCost?.amount || "0");
 
     return {
-      id: combinedData.id,
-      itemName: combinedData.title,
-      brand: combinedData.vendor,
-      receivedDate: combinedData.metafield?.value || "",
+      id: shopifyData.id,
+      itemName: shopifyData.product.title,
+      brand: enrichedItem.brand,
+      receivedDate: shopifyData.product.metafield?.value || "",
       onSale,
       price,
       salePrice,
       cost,
-      suggestedPrice: onSale ? salePrice : price,
+      suggestedPrice: competitorPrice,
       removeDiscount: false,
       adjustMainPrice: false,
-      tags: combinedData.tags?.join(", ") || "",
-      handle: combinedData.handle,
+      tags: shopifyData.product.tags?.join(", ") || "",
+      handle: shopifyData.product.handle,
       competitorPrice,
-      competitorName: excelData.competitorName,
-      percentDiff: excelData.percentDiff,
+      competitorName: enrichedItem.competitorName,
+      competitorLink: enrichedItem.competitorLink,
+      percentDiff: enrichedItem.percentDiff,
       selected: false,
+      shopify: shopifyData,
     };
   };
 
@@ -288,8 +301,33 @@ export default function ExcelImport() {
       setIsSearching(true);
       setError("");
 
-      const shopifyData = await fetchShopifyItemByHandle(handleSearch.trim());
-      const processedItem = combineExcelAndShopifyData({} as ExcelRowData, shopifyData);
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
+
+      const response = await fetch(
+        `${apiBaseUrl}${basePath}/getShopifyItemInfobyHandle?handle=${handleSearch.trim()}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch item");
+      }
+
+      const shopifyData = await response.json();
+      
+      // Create a mock enriched item for single search
+      const mockEnrichedItem = {
+        item: handleSearch.trim(),
+        price: 0,
+        percentDiff: "0%",
+        competitorPrice: 0,
+        competitorName: "",
+        competitorLink: "",
+        id: shopifyData.id || "",
+        brand: shopifyData.vendor || "",
+        shopify: shopifyData
+      };
+
+      const processedItem = processEnrichedItem(mockEnrichedItem);
 
       if (processedItem) {
         // Check if item already exists
@@ -328,7 +366,7 @@ export default function ExcelImport() {
     setSelectAll(allSelected);
   };
 
-  const updateItemField = (index: number, field: keyof PriceAdjustmentItem, value: any) => {
+  const updateItemField = (index: number, field: keyof EnrichedPriceAdjustmentItem, value: any) => {
     const updatedItems = [...items];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
 
@@ -410,7 +448,7 @@ export default function ExcelImport() {
     }).format(amount);
   };
 
-  const getDecision = (item: PriceAdjustmentItem): string => {
+  const getDecision = (item: EnrichedPriceAdjustmentItem): string => {
     const currentPrice = item.onSale ? item.salePrice : item.price;
     if (item.suggestedPrice > currentPrice) return "Raise";
     if (item.suggestedPrice < currentPrice) return "Reduce";
@@ -479,6 +517,44 @@ export default function ExcelImport() {
           {value}
         </a>
       ),
+    },
+    {
+      key: "competitorName",
+      header: "Competitor",
+      render: (value, item) => {
+        if (item.competitorLink) {
+          return (
+            <a
+              href={item.competitorLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 flex items-center space-x-1"
+            >
+              <span>{value}</span>
+              <Eye className="w-3 h-3" />
+            </a>
+          );
+        }
+        return <span>{value}</span>;
+      },
+    },
+    {
+      key: "competitorPrice",
+      header: "Competitor Price",
+      render: (value) => formatCurrency(value),
+      className: "text-right",
+    },
+    {
+      key: "percentDiff",
+      header: "% Diff",
+      render: (value) => (
+        <span className={`font-medium ${
+          value.startsWith('-') ? 'text-red-600' : 'text-green-600'
+        }`}>
+          {value}
+        </span>
+      ),
+      className: "text-center",
     },
     {
       key: "receivedDate",
@@ -672,10 +748,10 @@ export default function ExcelImport() {
                     </FormField>
                     <div className="text-sm text-slate-600">
                       <p>
-                        Expected Excel format: Item, Price, % Diff, Competitor Price, Competitor
-                        Name, ..., ID, ..., Brand
+                        Expected Excel format: Item, Price, % Diff, Competitor Price, Competitor Name (with link), ..., ID, ..., Brand
                       </p>
                       <p>Rows with 0% difference will be automatically filtered out.</p>
+                      <p>Competitor links will be automatically extracted from Excel hyperlinks.</p>
                     </div>
                   </div>
                 ) : (
@@ -819,7 +895,8 @@ export default function ExcelImport() {
                 <div className="text-sm text-slate-500">
                   <p className="mb-2">Features available:</p>
                   <ul className="space-y-1">
-                    <li>• Import competitor pricing from Excel files</li>
+                    <li>• Import competitor pricing from Excel files with automatic link extraction</li>
+                    <li>• Batch processing of all items at once</li>
                     <li>• Search individual products by handle</li>
                     <li>• Bulk price adjustments with suggested pricing</li>
                     <li>• Remove discounts or adjust main prices</li>
@@ -838,9 +915,8 @@ export default function ExcelImport() {
                     <h4 className="font-semibold text-slate-900 mb-2">Excel Import Mode</h4>
                     <ul className="text-sm text-slate-600 space-y-1">
                       <li>• Upload Excel files with competitor pricing data</li>
-                      <li>
-                        • System automatically filters items with significant price differences
-                      </li>
+                      <li>• System processes all items in a single batch request</li>
+                      <li>• Competitor links are automatically extracted from Excel hyperlinks</li>
                       <li>• Items with less than 1.5% price difference are excluded</li>
                       <li>• Bulk processing of multiple products at once</li>
                     </ul>
