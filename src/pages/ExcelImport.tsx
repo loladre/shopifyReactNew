@@ -36,7 +36,7 @@ interface ExcelRowData {
   competitorPrice: number;
   competitorName: string;
   competitorLink?: string;
-  id: string;
+  barcode: string; // Changed from 'id' to 'barcode' to be more explicit
   brand: string;
 }
 
@@ -177,7 +177,7 @@ export default function ExcelImport() {
           competitorPrice: parseFloat(String(values[4]).replace(/[,$]/g, "")) || 0,
           competitorName: String(values[5] || ""),
           competitorLink,
-          id: String(values[8] || ""),
+          barcode: String(values[8] || ""), // Column H (index 7) contains the barcode
           brand: String(values[10] || ""),
         });
       });
@@ -322,7 +322,7 @@ export default function ExcelImport() {
         competitorPrice: 0,
         competitorName: "",
         competitorLink: "",
-        id: shopifyData.id || "",
+        barcode: shopifyData.id || "",
         brand: shopifyData.vendor || "",
         shopify: shopifyData
       };
@@ -748,10 +748,11 @@ export default function ExcelImport() {
                     </FormField>
                     <div className="text-sm text-slate-600">
                       <p>
-                        Expected Excel format: Item, Price, % Diff, Competitor Price, Competitor Name (with link), ..., ID, ..., Brand
+                        Expected Excel format: Item, Price, % Diff, Competitor Price, Competitor Name (with link), ..., Barcode (Column H), ..., Brand
                       </p>
                       <p>Rows with 0% difference will be automatically filtered out.</p>
                       <p>Competitor links will be automatically extracted from Excel hyperlinks.</p>
+                      <p><strong>Note:</strong> Column H should contain the product barcode, not a variant GID.</p>
                     </div>
                   </div>
                 ) : (
@@ -919,6 +920,7 @@ export default function ExcelImport() {
                       <li>• Competitor links are automatically extracted from Excel hyperlinks</li>
                       <li>• Items with less than 1.5% price difference are excluded</li>
                       <li>• Bulk processing of multiple products at once</li>
+                      <li>• <strong>Column H must contain product barcodes</strong></li>
                     </ul>
                   </div>
                   <div>
