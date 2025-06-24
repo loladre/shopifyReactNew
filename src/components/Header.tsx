@@ -79,6 +79,9 @@ export default function Header() {
                   <Link to="/published-orders" className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-purple-600 transition-colors duration-200" onClick={closeAllDropdowns}>
                     Published Orders
                   </Link>
+                  <Link to="/delete-purchase-order" className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-purple-600 transition-colors duration-200" onClick={closeAllDropdowns}>
+                    Delete Purchase Order
+                  </Link>
                   <Link to="/reorder" className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-purple-600 transition-colors duration-200" onClick={closeAllDropdowns}>
                     Re Order
                   </Link>
@@ -291,6 +294,9 @@ export default function Header() {
                 </Link>
                 <Link to="/published-orders" className="text-slate-700 hover:text-purple-600 py-2 px-6 block hover:bg-slate-50 rounded-lg transition-colors duration-200">
                   Published Orders
+                </Link>
+                <Link to="/delete-purchase-order" className="text-slate-700 hover:text-purple-600 py-2 px-6 block hover:bg-slate-50 rounded-lg transition-colors duration-200">
+                  Delete Purchase Order
                 </Link>
                 <Link to="/reorder" className="text-slate-700 hover:text-purple-600 py-2 px-6 block hover:bg-slate-50 rounded-lg transition-colors duration-200">
                   Re Order
