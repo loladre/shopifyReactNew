@@ -301,48 +301,28 @@ export default function ExcelImport() {
       setIsSearching(true);
       setError("");
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-      const basePath = import.meta.env.VITE_SHOPIFY_BASE_PATH;
-
-      const response = await fetch(
-        `${apiBaseUrl}${basePath}/getShopifyItemInfobyHandle?handle=${handleSearch.trim()}`
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch item");
-      }
-
-      const shopifyData = await response.json();
-      
-      // Create a mock enriched item for single search
-      const mockEnrichedItem = {
+      // Create a single item array for batch processing
+      const singleItemData: ExcelRowData[] = [{
         item: handleSearch.trim(),
         price: 0,
         percentDiff: "0%",
         competitorPrice: 0,
-        competitorName: "",
+        competitorName: "Manual Search",
         competitorLink: "",
-        barcode: shopifyData.id || "",
-        brand: shopifyData.vendor || "",
-        shopify: shopifyData
-      };
+        barcode: "", // Will be filled by backend
+        brand: "", // Will be filled by backend
+      }];
 
-      const processedItem = processEnrichedItem(mockEnrichedItem);
+      // Use the same batch processing endpoint
+      await processBatchData(singleItemData);
 
-      if (processedItem) {
-        // Check if item already exists
-        const existingIndex = items.findIndex((item) => item.id === processedItem.id);
-        if (existingIndex !== -1) {
-          setError("Item already exists in the list");
-          return;
-        }
-
-        setItems([...items, processedItem]);
-        setHandleSearch("");
-        setSuccess("Item added successfully");
-      } else {
-        setError("Item does not meet criteria for price adjustment");
+      if (items.length === 0) {
+        setError("Item does not meet criteria for price adjustment or was not found");
+        return;
       }
+
+      setHandleSearch("");
+      setSuccess("Item added successfully");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch item");
     } finally {
