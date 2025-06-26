@@ -29,6 +29,7 @@ import SellThroughData from "./pages/SellThroughData";
 import Pictures from "./pages/Pictures";
 import EditPublishedOrder from "./pages/EditPublishedOrder";
 import ReceiveInventory from "./pages/ReceiveInventory";
+import MarginCalculator from "./pages/MarginCalculator";
 
 interface LoginResponse {
   registered: boolean;
@@ -386,6 +387,14 @@ function App() {
           element={
             <ProtectedRoute>
               <LateOrders />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/margin-calculator"
+          element={
+            <ProtectedRoute>
+              <MarginCalculator />
             </ProtectedRoute>
           }
         />

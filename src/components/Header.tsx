@@ -88,6 +88,9 @@ export default function Header() {
                   <Link to="/late-orders" className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-purple-600 transition-colors duration-200" onClick={closeAllDropdowns}>
                     Late Orders
                   </Link>
+                  <Link to="/margin-calculator" className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-purple-600 transition-colors duration-200" onClick={closeAllDropdowns}>
+                    Margin Calculator
+                  </Link>
                 </div>
               )}
             </div>
@@ -303,6 +306,9 @@ export default function Header() {
                 </Link>
                 <Link to="/late-orders" className="text-slate-700 hover:text-purple-600 py-2 px-6 block hover:bg-slate-50 rounded-lg transition-colors duration-200">
                   Late Orders
+                </Link>
+                <Link to="/margin-calculator" className="text-slate-700 hover:text-purple-600 py-2 px-6 block hover:bg-slate-50 rounded-lg transition-colors duration-200">
+                  Margin Calculator
                 </Link>
               </div>
 
